@@ -17,4 +17,6 @@ pnpm-debug.log*
 
 # Local test / temporary files
 *.log
-*.tmp
+*.tmp.firebase/
+
+.firebase/
