@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "dltracker-8bed3"
-  }
+  },
+  "targets": {
+    "dltracker-8bed3": {
+      "hosting": {
+        "production": [
+          "deadlift-tracker-app"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

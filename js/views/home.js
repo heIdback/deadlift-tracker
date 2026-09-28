@@ -59,8 +59,11 @@ export async function mount(root) {
   const nextDay = days.find((d) => d.order === dayOrder) ?? days[0];
   const weekMeta = program.weeks?.find((w) => w.week === weekOfEight);
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 7);
+  // "This Week" = current calendar week, Monday 00:00 local time through now
+  // (not a rolling 7 days, not UTC midnight). Same local-midnight
+  // construction as isEditableLocalWindow in js/utils/workoutCompletion.js.
+  const now = new Date();
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
   const [latestWorkout, bodyweight, completedThisWeek] = await Promise.all([
     getLatestCompletedWorkout(uid),
     getLatestBodyweight(uid),

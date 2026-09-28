@@ -8,7 +8,7 @@ import { getDocSafe, getDocsSafe } from '../utils/firestoreRead.js';
 import { getProgram, getProgramDays } from './programService.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
 import { computeNextPosition } from '../utils/programProgress.js';
-import { classifyCompletionState, isEditableCompletedWorkout, EXPLICIT_SKIP_STATE } from '../utils/workoutCompletion.js';
+import { classifyCompletionState, isEditableCompletedWorkout, EXPLICIT_SKIP_STATE, resolveCompletionState } from '../utils/workoutCompletion.js';
 import { orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { isOfflineUnavailableError } from '../utils/offlineError.js';
 
@@ -478,11 +478,20 @@ export function clearLocalActiveWorkoutMarker(uid) {
 }
 
 /**
- * Count of completed workouts finished within the last N days, for "this
- * week" stat. Correction pass 6: routed through getDocsSafe, same reasoning
- * as getLatestCompletedWorkout above — an offline cache-miss safely
- * defaults to 0 rather than hanging.
+ * Count of qualifying workouts finished on/after `sinceDate`, for Home's
+ * "This Week" stat (the caller passes the current calendar week's Monday
+ * 00:00 local). Correction pass 6: routed through getDocsSafe, same
+ * reasoning as getLatestCompletedWorkout above — an offline cache-miss
+ * safely defaults to 0 rather than hanging.
+ *
+ * v21: a finished workout counts only when History's own canonical
+ * resolver (resolveCompletionState) says 'complete' or 'partial'. Skipped
+ * and not_logged are excluded (both are also stored with status
+ * 'completed'), and in_progress never matches the status filter. Same
+ * query as before, so no new Firestore index is needed.
  */
+const COUNTED_COMPLETION_STATES = new Set(['complete', 'partial']);
+
 export async function countCompletedSince(uid, sinceDate) {
   const q = query(
     workoutsCol(uid),
@@ -490,7 +499,7 @@ export async function countCompletedSince(uid, sinceDate) {
     where('finishedAt', '>=', sinceDate),
   );
   const snap = await getDocsSafe(q);
-  return snap.size;
+  return snap.docs.filter((d) => COUNTED_COMPLETION_STATES.has(resolveCompletionState(d.data()))).length;
 }
 
 /**

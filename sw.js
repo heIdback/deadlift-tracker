@@ -344,7 +344,18 @@
 // keep serving the OLD shell (still containing and referencing the
 // now-deleted temporary reset module) forever, since cache-first never
 // re-checks the network for a hit.
-const CACHE_VERSION = 'v20';
+//
+// v21 — Home "Workouts This Week" correction. No precached asset was added
+// or removed; the bump ships changed module content:
+//   - js/services/workoutService.js — countCompletedSince now counts only
+//     workouts whose resolveCompletionState (the same resolver History
+//     uses) is 'complete' or 'partial'; skipped / not_logged / in_progress
+//     are excluded.
+//   - js/views/home.js — "This Week" is the current calendar week, Monday
+//     00:00 local time through now, instead of a rolling 7 days.
+// Without the bump an installed v20 browser would keep serving the old
+// modules, since cache-first never re-checks the network for a hit.
+const CACHE_VERSION = 'v21';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
