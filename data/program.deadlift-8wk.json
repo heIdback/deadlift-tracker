@@ -1,0 +1,1775 @@
+{
+  "schemaVersion": 1,
+  "id": "deadlift-focused-8wk",
+  "name": "Deadlift Focused (8-Week Block)",
+  "sourceFile": "Deadlift_210_220_Final.xlsx",
+  "generatedBy": "scripts/generate_program.py",
+  "roundingRules": {
+    "barbell": 2.5,
+    "dumbbell": 1,
+    "machine": 2.5,
+    "bodyweight": 0
+  },
+  "currentOneRepMaxesAtImport": {
+    "deadlift": 205,
+    "back-squat": 160,
+    "romanian-deadlift": 130,
+    "bench-press": 130
+  },
+  "weeks": [
+    {
+      "week": 1,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Technique and volume",
+      "deadliftNotesFromBlock": "RPE 7-7.5",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 2,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Control and stability",
+      "deadliftNotesFromBlock": "RPE 7.5-8",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 3,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "High strength",
+      "deadliftNotesFromBlock": "RPE 8",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 4,
+      "cycle": 1,
+      "isDeload": true,
+      "isPrAttempt": false,
+      "focusFromOverview": "Recovery",
+      "deadliftNotesFromBlock": "Deload",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 5,
+      "cycle": 2,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Explosiveness",
+      "deadliftNotesFromBlock": "RPE 8",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 6,
+      "cycle": 2,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "CNS adaptation",
+      "deadliftNotesFromBlock": "RPE 8.5 (ne grindati)",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 7,
+      "cycle": 2,
+      "isDeload": true,
+      "isPrAttempt": false,
+      "focusFromOverview": "Sub-max strength",
+      "deadliftNotesFromBlock": "Taper / Deload",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    },
+    {
+      "week": 8,
+      "cycle": 2,
+      "isDeload": false,
+      "isPrAttempt": true,
+      "focusFromOverview": "Reset and recovery",
+      "deadliftNotesFromBlock": "PR Day",
+      "_note": "Block and Overview sheets disagree on weeks 3/4/7/8's character (see Phase 1 analysis). isDeload/isPrAttempt come from the Block sheet (deadlift structural source of truth); focusFromOverview is descriptive text only and may not match for those weeks."
+    }
+  ],
+  "days": [
+    {
+      "id": "day1-lower-a-deadlift",
+      "order": 1,
+      "name": "Lower A (Deadlift Focus)",
+      "sections": {
+        "warmup": {
+          "source": "spreadsheet",
+          "text": "2–3 min lagano hodanje/bicikl, Cat-Camel 2×8, Glute Bridge 2×15, Hip Opener 30s/str, RDL sa štapom 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "structure": "block-driven",
+            "weeklyVariants": [
+              {
+                "week": 1,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.9024
+                  },
+                  "sourceWeightKgAtImport": 185.0
+                },
+                "backoff": {
+                  "sets": 4,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.7317
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 3,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.561,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "RPE 7-7.5",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 160.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 175.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 185.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 2,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.9268
+                  },
+                  "sourceWeightKgAtImport": 190.0
+                },
+                "backoff": {
+                  "sets": 4,
+                  "reps": 4,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.7805
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 3,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.5854,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "RPE 7.5-8",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 165.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 180.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 190.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 3,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.9512
+                  },
+                  "sourceWeightKgAtImport": 195.0
+                },
+                "backoff": {
+                  "sets": 4,
+                  "reps": 3,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.8293
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 3,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.6098,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "RPE 8",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 170.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 185.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 195.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 4,
+                "isDeload": true,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.8537
+                  },
+                  "sourceWeightKgAtImport": 175.0
+                },
+                "backoff": {
+                  "sets": 3,
+                  "reps": 3,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.6585
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 2,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.5122,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "Deload",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 160.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 175.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 5,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.9756
+                  },
+                  "sourceWeightKgAtImport": 200.0
+                },
+                "backoff": {
+                  "sets": 3,
+                  "reps": 4,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.8049
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 3,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.6098,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "RPE 8",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 170.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 190.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 200.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 6,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 1.0
+                  },
+                  "sourceWeightKgAtImport": 205.0
+                },
+                "backoff": {
+                  "sets": 3,
+                  "reps": 3,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.8537
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 3,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.6341,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "RPE 8.5 (ne grindati)",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 170.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 190.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 205.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 7,
+                "isDeload": true,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.878
+                  },
+                  "sourceWeightKgAtImport": 180.0
+                },
+                "backoff": {
+                  "sets": 2,
+                  "reps": 3,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.7073
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 2,
+                  "reps": 5,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.5366,
+                    "of": "deadlift"
+                  }
+                },
+                "notes": "Taper / Deload",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 160.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 180.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 8,
+                "isDeload": false,
+                "isPrAttempt": true,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 1.0244
+                  },
+                  "sourceWeightKgAtImport": 210.0
+                },
+                "backoff": {
+                  "sets": null,
+                  "reps": null,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.7805
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 0,
+                  "note": "Nema"
+                },
+                "notes": "PR Day",
+                "warmupSets": [
+                  {
+                    "kg": 70.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 170.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 190.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 200.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 210.0,
+                    "reps": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "leg-press-high-foot",
+            "displayName": "Leg Press (High Foot Placement)",
+            "sets": 4,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.65,
+              "max": 0.75
+            },
+            "notes": "aktivira kvadove uz manji stres na leđa i zglobove",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "romanian-deadlift",
+            "displayName": "Romanian Deadlift",
+            "sets": 3,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.55,
+              "max": 0.57
+            },
+            "notes": "Hamstring hypertrophy",
+            "weeks": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "exerciseId": "hack-squat",
+            "displayName": "Hack squat",
+            "sets": 4,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "core-ab-wheel",
+            "displayName": "Core (Ab wheel / Leg raises)",
+            "sets": 3,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Core stability",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "leg-press-high-foot",
+            "displayName": "Leg Press (High Foot Placement)",
+            "sets": 4,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.7,
+              "max": 0.8
+            },
+            "notes": "Focus on power and depth",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "romanian-deadlift",
+            "displayName": "Romanian Deadlift",
+            "sets": 3,
+            "reps": {
+              "min": 6,
+              "max": 8
+            },
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.55,
+              "max": 0.6
+            },
+            "notes": "Hamstring and glute strength",
+            "weeks": [
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "hack-squat",
+            "displayName": "Hack squat",
+            "sets": 4,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Leg drive",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "core-ab-wheel",
+            "displayName": "Core (Ab wheel / Cable crunch)",
+            "sets": 3,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Core stability and tension",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "spreadsheet",
+          "text": "Hamstring, Piriformis, Hip Flexor, Back Hang – 30s svaki"
+        }
+      }
+    },
+    {
+      "id": "day2-upper-a-bench",
+      "order": 2,
+      "name": "Upper A (Bench Focus)",
+      "sections": {
+        "warmup": {
+          "source": "spreadsheet",
+          "text": "Band Pull-Apart 2×15, External Rotation 2×15, Arm Circles 2×10, Push-up Plus 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "bench-press",
+            "displayName": "Bench Press",
+            "structure": "week-percent-range",
+            "weeklyVariants": [
+              {
+                "week": 1,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.7,
+                  "max": 0.72
+                }
+              },
+              {
+                "week": 2,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.75,
+                  "max": 0.77
+                }
+              },
+              {
+                "week": 3,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.8,
+                  "max": 0.82
+                }
+              },
+              {
+                "week": 4,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6,
+                  "max": 0.65
+                }
+              },
+              {
+                "week": 5,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.8,
+                  "max": 0.85
+                }
+              },
+              {
+                "week": 6,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.85,
+                  "max": 0.88
+                }
+              },
+              {
+                "week": 7,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.9,
+                  "max": 0.92
+                }
+              },
+              {
+                "week": 8,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6,
+                  "max": 0.65
+                }
+              }
+            ],
+            "setsReps": {
+              "1": "4x5",
+              "2": "4x5",
+              "3": "4x5",
+              "4": "4x5",
+              "5": "4x4",
+              "6": "4x4",
+              "7": "4x4",
+              "8": "4x4"
+            }
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "landmine-press",
+            "displayName": "Landmine press",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 22,
+              "note": "Starting weight (pocetak) — increase manually as capacity allows."
+            },
+            "notes": "Shoulder strength",
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "pull-row-neutral",
+            "displayName": "Pull/Row (Neutral grip)",
+            "sets": 4,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Lateral stability, elbow-safe",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "db-row",
+            "displayName": "DB Row",
+            "sets": 3,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "face-pulls-triceps-dips",
+            "displayName": "Face pulls + Triceps dips",
+            "sets": 3,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Superset finisher (split into 2 logged exercises)",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "rope-triceps-pushdown",
+            "displayName": "Rope Triceps Pushdown (Neutral Grip)",
+            "sets": 3,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Dlanovi paralelni, bez forsiranja lakta",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "overhead-rope-extension",
+            "displayName": "Overhead rope extension",
+            "sets": 2,
+            "reps": 12,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "wrist-extensor-stretch",
+            "displayName": "Wrist Extensor Stretch",
+            "sets": 2,
+            "reps": null,
+            "durationSec": 30,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Istezanje podlaktice nakon treninga",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "pull-row-neutral",
+            "displayName": "Neutral Grip Row",
+            "sets": 4,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Keep elbow-friendly pulling",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "db-row",
+            "displayName": "DB Row",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 35,
+              "perHand": true
+            },
+            "notes": "Lat thickness",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "face-pulls-pushdowns",
+            "displayName": "Face Pulls + Pushdowns",
+            "sets": 3,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Stability and joint health",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "spreadsheet",
+          "text": "Chest, Shoulder, Triceps Stretch – 30s svaki"
+        }
+      }
+    },
+    {
+      "id": "day3-lower-b-squat",
+      "order": 3,
+      "name": "Lower B (Squat + Posterior Chain)",
+      "sections": {
+        "warmup": {
+          "source": "spreadsheet",
+          "text": "Leg Swings 2×10, Air Squats 2×10, Hip Band Walks 2×10, Ankle Rock 2×10; Quad, Glute, Hamstring, Calf Stretch – 30s svaki"
+        },
+        "main": [
+          {
+            "exerciseId": "back-squat",
+            "displayName": "Back Squat",
+            "structure": "week-percent-range",
+            "weeklyVariants": [
+              {
+                "week": 1,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.7,
+                  "max": 0.72
+                }
+              },
+              {
+                "week": 2,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.75,
+                  "max": 0.77
+                }
+              },
+              {
+                "week": 3,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.8,
+                  "max": 0.82
+                }
+              },
+              {
+                "week": 4,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6,
+                  "max": 0.65
+                }
+              },
+              {
+                "week": 5,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.8,
+                  "max": 0.85
+                }
+              },
+              {
+                "week": 6,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.85,
+                  "max": 0.88
+                }
+              },
+              {
+                "week": 7,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.9,
+                  "max": 0.92
+                }
+              },
+              {
+                "week": 8,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6,
+                  "max": 0.65
+                }
+              }
+            ],
+            "setsReps": {
+              "1": "4x6-8",
+              "2": "4x6-8",
+              "3": "4x6-8",
+              "4": "4x6-8",
+              "5": "4x5",
+              "6": "4x5",
+              "7": "4x5",
+              "8": "4x5"
+            }
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "snatch-grip-deadlift",
+            "displayName": "Deficit / Snatch-grip Deadlift",
+            "sets": 3,
+            "reps": 5,
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.65,
+              "max": 0.75,
+              "of": "deadlift"
+            },
+            "notes": "DL accessory. Snatch-Grip Deadlift — user confirmed 2026-09-25 this source wording means SGDL, not a Deficit Deadlift (see import-mapping.json:deficit-sgdl-day3). % calculated against the standard Deadlift training 1RM (no separate SGDL max exists).",
+            "weeks": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "exerciseId": "single-leg-leg-press",
+            "displayName": "Single leg legpress",
+            "sets": 3,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Single-leg balance",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "hamstring-curl",
+            "displayName": "Hamstring Curl",
+            "sets": 3,
+            "reps": 12,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Posterior chain hypertrophy",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "core-plank",
+            "displayName": "Core / Plank",
+            "sets": 3,
+            "reps": null,
+            "durationSec": 60,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Stability & bracing",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "snatch-grip-deadlift",
+            "displayName": "Deficit / Snatch Deadlift",
+            "sets": 3,
+            "reps": 4,
+            "durationSec": null,
+            "load": {
+              "type": "percentRange",
+              "min": 0.7,
+              "max": 0.8,
+              "of": "deadlift"
+            },
+            "notes": "Posterior chain overload. Snatch-Grip Deadlift — user confirmed 2026-09-25 this source wording means SGDL, not a Deficit Deadlift (see import-mapping.json:deficit-sgdl-day3). % calculated against the standard Deadlift training 1RM (no separate SGDL max exists).",
+            "weeks": [
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "bulgarian-split-squat",
+            "displayName": "Bulgarian Split Squat",
+            "sets": 3,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Control & balance",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "hamstring-curl",
+            "displayName": "Hamstring Curl",
+            "sets": 3,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Posterior chain isolation",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "core-plank",
+            "displayName": "Core / Plank",
+            "sets": 3,
+            "reps": null,
+            "durationSec": 60,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Bracing work",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "spreadsheet",
+          "text": null
+        }
+      }
+    },
+    {
+      "id": "day4-upper-b-pull",
+      "order": 4,
+      "name": "Upper B (Pull Focus)",
+      "sections": {
+        "warmup": {
+          "source": "spreadsheet",
+          "text": "Band Rows 2×15, Scapular Pull-Up 2×10, Shoulder Dislocates 2×10, Wrist Circles 2×10; Lat, Wrist, Trap Stretch + Neck Rolls – ukupno 2 min"
+        },
+        "main": [
+          {
+            "exerciseId": "incline-bench-press",
+            "displayName": "Incline Bench Press",
+            "sets": 3,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Upper chest",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "incline-bench-press",
+            "displayName": "Incline Bench Press",
+            "sets": 3,
+            "reps": {
+              "min": 6,
+              "max": 8
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": "Slightly heavier. Day assignment confirmed by user 2026-09-25 — see import-mapping.json:incline-bench-day-assignment.",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "pendlay-row",
+            "displayName": "Pendlay Row",
+            "sets": 4,
+            "reps": {
+              "min": 6,
+              "max": 8
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Power pull",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "landmine-press",
+            "displayName": "Landmine press",
+            "sets": 3,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Deltoid balance",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "chest-supported-row",
+            "displayName": "Chest-supported Row (Neutral Grip)",
+            "sets": 4,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Elbow-friendly lat work",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "straight-arm-pulldown",
+            "displayName": "Straight-arm Pulldown (Cable/Band)",
+            "sets": 3,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Lat isolation",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "rope-triceps-pushdown",
+            "displayName": "Rope Triceps Pushdown (Neutral Grip)",
+            "sets": 4,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Dlanovi paralelni, bez forsiranja lakta",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "isometric-biceps-hold",
+            "displayName": "Isometric Biceps Hold (Band)",
+            "sets": 3,
+            "reps": null,
+            "durationSec": 30,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Lagani izometrijski otpor",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "reverse-curl",
+            "displayName": "Reverse Curl (Light Band/Dumbbell)",
+            "sets": 2,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Dlanovi prema dolje, lagano",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "wrist-extensor-stretch",
+            "displayName": "Wrist Extensor Stretch",
+            "sets": 3,
+            "reps": null,
+            "durationSec": 30,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Istezanje podlaktice nakon treninga",
+            "weeks": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "exerciseId": "pendlay-row",
+            "displayName": "Pendlay Row",
+            "sets": 4,
+            "reps": 6,
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": false
+            },
+            "notes": "Explosive row",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "landmine-press",
+            "displayName": "Landmine press",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 27.5
+            },
+            "notes": "Overhead stability",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "chest-supported-row",
+            "displayName": "Chest-supported Row (Neutral Grip)",
+            "sets": 4,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 60,
+              "perHand": false
+            },
+            "notes": "Elbow-friendly pull",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "exerciseId": "straight-arm-pulldown",
+            "displayName": "Straight-arm Pulldown (Cable/Band)",
+            "sets": 3,
+            "reps": 12,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Lat activation",
+            "weeks": [
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "spreadsheet",
+          "text": null
+        }
+      }
+    }
+  ],
+  "importReviewFlags": [],
+  "exerciseLibrary": [
+    {
+      "id": "back-squat",
+      "name": "Back Squat",
+      "aliases": [
+        "Back Squat",
+        "Squat"
+      ],
+      "cue": null
+    },
+    {
+      "id": "bench-press",
+      "name": "Bench Press",
+      "aliases": [
+        "Bench Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "bulgarian-split-squat",
+      "name": "Bulgarian Split Squat",
+      "aliases": [
+        "Bulgarian Split Squat"
+      ],
+      "cue": null
+    },
+    {
+      "id": "chest-supported-row",
+      "name": "Chest Supported Row",
+      "aliases": [
+        "Chest-supported Row (Neutral Grip)"
+      ],
+      "cue": null
+    },
+    {
+      "id": "core-ab-wheel",
+      "name": "Core Ab Wheel",
+      "aliases": [
+        "Core (Ab wheel / Leg raises)",
+        "Core (Ab wheel / Cable crunch)"
+      ],
+      "cue": null
+    },
+    {
+      "id": "core-plank",
+      "name": "Core Plank",
+      "aliases": [
+        "Core / Plank"
+      ],
+      "cue": null
+    },
+    {
+      "id": "db-row",
+      "name": "Db Row",
+      "aliases": [
+        "DB Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "deadlift",
+      "name": "Deadlift",
+      "aliases": [
+        "Deadlift"
+      ],
+      "cue": null
+    },
+    {
+      "id": "face-pulls",
+      "name": "Face Pulls",
+      "aliases": [
+        "Face pulls",
+        "Face Pulls"
+      ],
+      "cue": null
+    },
+    {
+      "id": "hack-squat",
+      "name": "Hack Squat",
+      "aliases": [
+        "Hack squat"
+      ],
+      "cue": null
+    },
+    {
+      "id": "hamstring-curl",
+      "name": "Hamstring Curl",
+      "aliases": [
+        "Hamstring Curl"
+      ],
+      "cue": null
+    },
+    {
+      "id": "incline-bench-press",
+      "name": "Incline Bench Press",
+      "aliases": [
+        "Incline Bench Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "isometric-biceps-hold",
+      "name": "Isometric Biceps Hold",
+      "aliases": [
+        "Isometric Biceps Hold (Band)"
+      ],
+      "cue": "Lagano zategni elastičnu traku i drži pod 90° u laktu 30 sekundi. Bez pokreta."
+    },
+    {
+      "id": "landmine-press",
+      "name": "Landmine Press",
+      "aliases": [
+        "Landmine press",
+        "Landmine Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "leg-press-high-foot",
+      "name": "Leg Press High Foot",
+      "aliases": [
+        "Leg Press (High Foot Placement)"
+      ],
+      "cue": null
+    },
+    {
+      "id": "overhead-rope-extension",
+      "name": "Overhead Rope Extension",
+      "aliases": [
+        "Overhead rope extension",
+        "Overhead Rope Triceps Extension"
+      ],
+      "cue": "Povuci konop iznad glave. Osjeti istezanje tricepsa, kontroliraj ekscentričnu fazu."
+    },
+    {
+      "id": "pendlay-row",
+      "name": "Pendlay Row",
+      "aliases": [
+        "Pendlay Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "pull-row-neutral",
+      "name": "Pull Row Neutral",
+      "aliases": [
+        "Pull/Row (Neutral grip)",
+        "Neutral Grip Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "reverse-curl",
+      "name": "Reverse Curl",
+      "aliases": [
+        "Reverse Curl (Light Band/Dumbbell)"
+      ],
+      "cue": "Dlanovi okrenuti prema dolje. Radi s malom težinom i kontroliraj pokret."
+    },
+    {
+      "id": "romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "aliases": [
+        "Romanian Deadlift",
+        "RDL"
+      ],
+      "cue": null
+    },
+    {
+      "id": "rope-triceps-pushdown",
+      "name": "Rope Triceps Pushdown",
+      "aliases": [
+        "Rope Triceps Pushdown (Neutral Grip)",
+        "Pushdowns"
+      ],
+      "cue": "Koristi konop s neutralnim hvatom. Drži laktove uz tijelo, fokus na potpunoj ekstenziji bez trzaja."
+    },
+    {
+      "id": "single-leg-leg-press",
+      "name": "Single Leg Leg Press",
+      "aliases": [
+        "Single leg legpress"
+      ],
+      "cue": null
+    },
+    {
+      "id": "snatch-grip-deadlift",
+      "name": "Snatch Grip Deadlift",
+      "aliases": [
+        "SGDL",
+        "Snatch Grip Deadlift",
+        "Snatch-Grip Deadlift",
+        "Deficit / Snatch-grip Deadlift",
+        "Deficit / Snatch Deadlift"
+      ],
+      "cue": null
+    },
+    {
+      "id": "straight-arm-pulldown",
+      "name": "Straight Arm Pulldown",
+      "aliases": [
+        "Straight-arm Pulldown (Cable/Band)"
+      ],
+      "cue": null
+    },
+    {
+      "id": "triceps-dips",
+      "name": "Triceps Dips",
+      "aliases": [
+        "Triceps dips"
+      ],
+      "cue": null
+    },
+    {
+      "id": "wrist-extensor-stretch",
+      "name": "Wrist Extensor Stretch",
+      "aliases": [
+        "Wrist Extensor Stretch"
+      ],
+      "cue": "Dlan prema dolje, prstima povuci šaku prema sebi i drži 30 sekundi. Odlična prevencija epikondilitisa."
+    }
+  ]
+}

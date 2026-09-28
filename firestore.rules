@@ -1,0 +1,263 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── Access control (Phase 3C) ─────────────────────────────────────────
+    // `/access/{uid}` is the single source of truth for whether a signed-in
+    // user may touch anything under `/users/{uid}/...`. Being authenticated
+    // is necessary but NOT sufficient — these two helpers are what every
+    // fitness-data rule below is actually gated on.
+    function accessRecord(uid) {
+      return get(/databases/$(database)/documents/access/$(uid)).data;
+    }
+
+    function isApprovedUser(uid) {
+      return isOwner(uid)
+        && exists(/databases/$(database)/documents/access/$(uid))
+        && accessRecord(uid).status == 'approved';
+    }
+
+    function isApprovedAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/access/$(request.auth.uid))
+        && accessRecord(request.auth.uid).status == 'approved'
+        && accessRecord(request.auth.uid).role == 'admin';
+    }
+
+    match /access/{uid} {
+      // Any signed-in user may read their OWN record (to learn their own
+      // pending/approved/disabled status); an approved admin may read any
+      // record. Listing/querying the whole collection (the admin UI's
+      // pending/approved/disabled lists) is a SEPARATE permission
+      // (`list`) restricted to admins only — an ordinary user cannot
+      // enumerate other users' access records even though they can `get`
+      // their own by uid.
+      allow get: if isOwner(uid) || isApprovedAdmin();
+      allow list: if isApprovedAdmin();
+
+      // A user may create ONLY their own record, and ONLY as the exact
+      // minimal, non-privileged pending-request shape — this is what stops
+      // a user from smuggling `status: 'approved'` or `role: 'admin'` (or
+      // any extra field) into their first request. `requestedAt ==
+      // request.time` requires an actual server timestamp, not a spoofed
+      // client-supplied date.
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.role == 'user'
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && request.resource.data.photoURL is string
+        && request.resource.data.requestedAt == request.time
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'email', 'displayName', 'photoURL', 'status', 'role', 'requestedAt']
+           );
+
+      // Only an approved admin may EVER update an access record — this is
+      // the rule that stops a pending/disabled/approved non-admin user from
+      // approving themselves, assigning themselves the admin role, or
+      // otherwise changing their own status/role. Even an admin's update
+      // can't touch identity fields or fabricate who performed the action:
+      // `approvedBy`/`disabledBy` must be the CALLING admin's own uid.
+      allow update: if isApprovedAdmin()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.photoURL == resource.data.photoURL
+        && request.resource.data.requestedAt == resource.data.requestedAt
+        && request.resource.data.status in ['pending', 'approved', 'disabled']
+        && request.resource.data.role in ['user', 'admin']
+        && (request.resource.data.status != 'approved' || request.resource.data.approvedBy == request.auth.uid)
+        && (request.resource.data.status != 'disabled' || request.resource.data.disabledBy == request.auth.uid);
+
+      allow delete: if false;
+    }
+
+    // All of a user's FITNESS data lives under users/{uid}/... . Nothing
+    // here is writable by anyone except that authenticated uid AND only
+    // once their access record confirms `status == 'approved'` — enforced
+    // here, not by frontend filtering.
+    //
+    // Phase 3F adds READ-ONLY cross-user access for an approved admin, to
+    // support the Admin Dashboard / User List / User Detail screens
+    // (js/services/adminInsightsService.js — the only client code that ever
+    // reads another user's data, and it contains no write calls at all).
+    // This is deliberately narrow: every `write`-family permission below
+    // (create/update/delete) stays exactly `isApprovedUser(uid)` — an
+    // owner-only check — completely unchanged from before Phase 3F. Only
+    // `read` (get + list) gains the `|| isApprovedAdmin()` clause, and only
+    // on the collections the admin UI actually uses (programs/days,
+    // programRuns, maxes, workouts, measurements, and the profile doc
+    // itself). `records`, `progressionSuggestions`, and `nutrition` are
+    // untouched — nothing in Phase 3F reads them, and nothing in the app
+    // writes them yet either.
+    match /users/{uid} {
+      allow read: if isApprovedUser(uid) || isApprovedAdmin();
+      allow update: if isApprovedUser(uid);
+      // Profile creation happens once, from ensureUserProfile() right after
+      // access is confirmed approved (see core/access.js), with the doc id
+      // fixed to the signer's own uid.
+      allow create: if isApprovedUser(uid) && request.resource.data.uid == uid;
+      allow delete: if false; // no client-side account deletion in v1
+
+      match /programs/{programId} {
+        allow read: if isApprovedUser(uid) || isApprovedAdmin();
+        allow write: if isApprovedUser(uid);
+
+        match /days/{dayId} {
+          allow read: if isApprovedUser(uid) || isApprovedAdmin();
+          allow write: if isApprovedUser(uid);
+        }
+      }
+
+      match /programRuns/{runId} {
+        allow read: if isApprovedUser(uid) || isApprovedAdmin();
+        allow write: if isApprovedUser(uid);
+      }
+
+      match /maxes/{maxId} {
+        allow read: if isApprovedUser(uid) || isApprovedAdmin();
+        // 1RM history is append-only from the client: create allowed,
+        // update/delete blocked, so past basis values can't be rewritten.
+        // (This is also why a JSON restore, Phase 3F, can only ever ADD
+        // missing history entries here, never delete stale ones — see
+        // restoreService.js's module comment.)
+        allow create: if isApprovedUser(uid)
+          && request.resource.data.kg is number
+          && request.resource.data.kg > 0
+          && request.resource.data.kg <= 500
+          && request.resource.data.exerciseId is string;
+        allow update, delete: if false;
+      }
+
+      match /workouts/{workoutId} {
+        allow read: if isApprovedUser(uid) || isApprovedAdmin();
+        // Create: owner may create either an in-progress session or a
+        // (rare, e.g. backfilled, or Phase 3F restored) already-completed
+        // one.
+        allow create: if isApprovedUser(uid)
+          && request.resource.data.status in ['in_progress', 'completed'];
+        // Update: only ever FROM in_progress, and only TO in_progress
+        // (autosaving an active session) or completed (finishing it) — this
+        // first branch is completely UNCHANGED from before Phase 4.1, so a
+        // JSON restore still must skip (not overwrite) a workout that
+        // already exists here as completed, exactly as before.
+        //
+        // Phase 4.1 (Goal C/E) adds a second, narrow branch: a workout that
+        // is ALREADY completed may still be updated, but ONLY to correct its
+        // actual-logging data within a short window after it was finished,
+        // and every identity/plan/timing field must stay byte-for-byte the
+        // same as it already is (`status` itself included — this branch can
+        // never change status, so it can never re-open or un-finish a
+        // workout, and it never touches programRuns at all). Only
+        // `exercises`, `completionState`, and `lastEditedAt` are free to
+        // differ from the existing document.
+        //
+        // Browser-test correction pass: this branch now ALSO requires the
+        // document NOT be an explicitly Skipped workout — an intentional
+        // Skip (js/services/workoutService.js's skipWorkout) is a
+        // deliberate terminal record with no per-set logging-correction UI
+        // in the app at all (history.js never renders "Edit Workout" for
+        // one). This rules change makes that a REAL, server-enforced
+        // invariant rather than a UI-only convention: even a direct API call
+        // bypassing the app's own UI/service-layer checks cannot edit a
+        // Skipped workout's logged sets through this branch.
+        //
+        // The check is deliberately `explicitSkip == true` (via `.get(...,
+        // false)`, which is what makes an ABSENT field on an old document
+        // default safely to `false` rather than erroring) — NOT
+        // `completionState == 'skipped'` — because an old Phase-4.1-era
+        // zero-set document may ALSO have `completionState: 'skipped'`
+        // stored literally, under that field's original, since-superseded
+        // meaning ("Not Logged", never an intentional abort — see
+        // js/utils/workoutCompletion.js's resolveCompletionState for the
+        // full explanation). Such a legacy document never has
+        // `explicitSkip: true`, so it correctly REMAINS editable here
+        // (matching the app's own resolveCompletionState-based resolution);
+        // only a document `skipWorkout` itself actually wrote is blocked.
+        //
+        // Nothing else about the branch changes — the existing field-
+        // pinning and time backstop below are unaffected, and a Skipped
+        // workout is still fully READABLE (the `allow read` rule above is
+        // untouched) and still permanently un-deletable (status stays
+        // 'completed').
+        //
+        // The exact requirement is "editable through the end of the
+        // FOLLOWING LOCAL CALENDAR DATE" — Rules have no concept of the
+        // requesting client's timezone/local calendar, only a UTC
+        // `request.time`, so that precise boundary genuinely cannot be
+        // expressed here without either rejecting some legitimately-still-
+        // eligible requests (for a client in a timezone far from UTC) or
+        // silently becoming a looser, different rule. Rather than fake that
+        // exact guarantee at this layer, this is a deliberately generous,
+        // always-SUFFICIENT backstop — 72 hours, comfortably wider than the
+        // real worst-case ~48-hour local-calendar window for any timezone
+        // offset (see js/utils/workoutCompletion.js's own comment on
+        // RULES_BACKSTOP_WINDOW_MS for the worked-out math) — so it can
+        // never reject a request the application layer still considers
+        // eligible. The EXACT calendar-day cutoff is enforced precisely in
+        // application/service code instead (js/utils/workoutCompletion.js's
+        // isEditableLocalWindow, checked both before the "Edit Workout" UI
+        // is even shown and again, server-adjacent, in
+        // workoutService.js's updateCompletedWorkoutLog immediately before
+        // this write is issued) — see the Phase 4.1 final report for the
+        // full explanation.
+        allow update: if isApprovedUser(uid)
+          && (
+            (resource.data.status == 'in_progress'
+              && request.resource.data.status in ['in_progress', 'completed'])
+            ||
+            (resource.data.status == 'completed'
+              && resource.data.get('explicitSkip', false) != true
+              && request.resource.data.status == 'completed'
+              && request.resource.data.programId == resource.data.programId
+              && request.resource.data.programRunId == resource.data.programRunId
+              && request.resource.data.week == resource.data.week
+              && request.resource.data.dayOrder == resource.data.dayOrder
+              && request.resource.data.dayId == resource.data.dayId
+              && request.resource.data.dayName == resource.data.dayName
+              && request.resource.data.notes == resource.data.notes
+              && request.resource.data.startedAt == resource.data.startedAt
+              && request.resource.data.finishedAt == resource.data.finishedAt
+              && request.resource.data.durationSec == resource.data.durationSec
+              && request.time < resource.data.finishedAt + duration.value(72, 'h'))
+          );
+        // Delete/discard: only while still in progress. A completed workout
+        // is permanent history and cannot be deleted by the client — this
+        // is also why a JSON restore can never fully "replace" workout
+        // history; see restoreService.js.
+        allow delete: if isApprovedUser(uid) && resource.data.status == 'in_progress';
+      }
+
+      match /records/{recordId} {
+        allow read, write: if isApprovedUser(uid);
+      }
+
+      match /progressionSuggestions/{suggestionId} {
+        allow read, write: if isApprovedUser(uid);
+      }
+
+      match /measurements/{entryId} {
+        allow read: if isApprovedUser(uid) || isApprovedAdmin();
+        allow create: if isApprovedUser(uid)
+          && request.resource.data.value is number
+          && request.resource.data.value >= 0
+          && request.resource.data.value <= 500;
+        allow update, delete: if isApprovedUser(uid);
+      }
+
+      match /nutrition/{entryId} {
+        allow read, write: if isApprovedUser(uid);
+      }
+    }
+  }
+}

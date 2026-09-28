@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "sourceFile": "Deadlift_210_220_Final.xlsx",
+  "_comment": "Every non-literal interpretation of the source spreadsheet lives here, not hidden in parser code. Edit and re-run scripts/generate_program.py to regenerate data/program.deadlift-8wk.json.",
+
+  "baseOneRepMaxes": {
+    "_comment": "From 'Full_progression_overview' B2:B6. Used only to derive % for weeks/exercises where the source gave a percentage computed against these. Confirmed with the user: Deadlift 205 kg is also the CURRENT training 1RM at the time of import.",
+    "deadlift": 205,
+    "back-squat": 160,
+    "romanian-deadlift": 130,
+    "bench-press": 130,
+    "overhead-press": 70
+  },
+
+  "excludedExercises": {
+    "overhead-press": "User confirmed 2026-09-25: legacy data from an older program version, no longer trained. Excluded from import entirely (no 1RM doc, no program day, no progression table). Can be added back manually later via the exercise library."
+  },
+
+  "corrections": [
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 2, Day 4, Landmine Press, Intensity column",
+      "rawValue": "45804 (read back as a datetime: 2025-05-27)",
+      "interpretation": "Excel auto-converted a typed value of '27.5' into a date serial number because of a locale/format mismatch. This is a corrected GUESS, not a certainty.",
+      "correctedValue": { "type": "fixed", "kg": 27.5 },
+      "confirmedByUser": true,
+      "confirmedOn": "2026-09-25"
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 1, Day 2, DB Row",
+      "rawValue": "40.0",
+      "interpretation": "Dumbbell weight, per hand, per user confirmation that two-dumbbell exercises are per-hand.",
+      "correctedValue": { "type": "fixed", "kg": 40, "perHand": true }
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 2, Day 2, DB Row",
+      "rawValue": "35.0 (found shifted into an adjacent column)",
+      "interpretation": "Dumbbell weight, per hand, per user confirmation that two-dumbbell exercises are per-hand.",
+      "correctedValue": { "type": "fixed", "kg": 35, "perHand": true }
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 1 & 2, Day 2, Landmine Press, Intensity column ('22 pocetak')",
+      "rawValue": "22 pocetak",
+      "interpretation": "'pocetak' = Croatian for 'start/starting'. Read as a starting fixed weight of 22 kg for this exercise, not a percentage.",
+      "correctedValue": { "type": "fixed", "kg": 22, "note": "Starting weight (pocetak) — increase manually as capacity allows." }
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 2, Day 4, Pendlay Row",
+      "rawValue": "40.0",
+      "interpretation": "Per user confirmation: barbell total loaded weight, NOT per-hand.",
+      "correctedValue": { "type": "fixed", "kg": 40, "perHand": false }
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 2, Day 4, Chest-Supported Row",
+      "rawValue": "60.0",
+      "interpretation": "Per user confirmation: machine total loaded weight, NOT per-hand.",
+      "correctedValue": { "type": "fixed", "kg": 60, "perHand": false }
+    },
+    {
+      "sheet": "4-Week Strength Plan",
+      "location": "Cycle 2, Incline Bench Press row (row 75), Intensity column ('db 40')",
+      "rawValue": "db 40",
+      "interpretation": "'db' = dumbbell. Read as 40 kg per hand. This row's DAY ASSIGNMENT was flagged as ambiguous and has since been confirmed by the user as Day 4 — see ambiguousPrescriptions.",
+      "correctedValue": { "type": "fixed", "kg": 40, "perHand": true }
+    },
+    {
+      "sheet": "Full_progression_overview",
+      "location": "Row 30, Romanian Deadlift, Week 4, Intensity column",
+      "rawValue": "55–57,%",
+      "interpretation": "Typo (stray comma). Read as 55–57%.",
+      "correctedValue": { "type": "percentRange", "min": 0.55, "max": 0.57 }
+    }
+  ],
+
+  "ambiguousPrescriptions": [
+    {
+      "id": "deficit-sgdl-day3",
+      "location": "4-Week Strength Plan, Day 3 (Lower B), 'Deficit / Snatch-grip Deadlift' (cycle 1) and 'Deficit / Snatch Deadlift' (cycle 2)",
+      "issue": "Two open questions: (1) whether this is the same movement as the SGDL already programmed on Day 1 via DL_210_220_Block, or a distinct Deficit Deadlift; (2) if distinct, what 1RM or fixed load basis it should use, since it has no dedicated 1RM entry.",
+      "resolution": "User confirmed 2026-09-25: both source occurrences were intended to mean Snatch-Grip Deadlift, not a Deficit Deadlift. Both rows now resolve to the canonical 'snatch-grip-deadlift' exerciseId (added as aliases). Their percentRange prescriptions (65–75% cycle 1 weeks 1-3, 70–80% cycle 2 weeks 5-7) are an explicit program-design resolution to be calculated against the standard Deadlift training 1RM ('deadlift'), not a separate SGDL max — encoded as load.of = 'deadlift' in the generated program, since SGDL has no 1RM of its own. This is a deliberate design decision, not a fact proven by the spreadsheet.",
+      "status": "resolved"
+    },
+    {
+      "id": "incline-bench-day-assignment",
+      "location": "4-Week Strength Plan, Cycle 2, row 75: 'Incline Bench Press, 3x6-8, db 40'",
+      "issue": "This row sits physically between the Day 3 (Squat) block and the Day 4 (Pull) header, due to the same row-shift pattern seen throughout this sheet. Cycle 1's Day 4 has 'Incline Bench Press' as its main lift (row 40), so thematically this row 75 entry is almost certainly Cycle 2's Day 4 main lift, not a Day 3 item — but its physical position does not confirm that.",
+      "resolution": "User confirmed 2026-09-25: accepted as Day 4's main lift for weeks 5-8 (3x6-8, 40 kg/hand), matching Cycle 1's Day 4 structure. No longer marked needsReview.",
+      "status": "resolved"
+    },
+    {
+      "id": "percent-ranges-no-single-target",
+      "location": "All Back Squat, Romanian Deadlift, and Bench Press accessory/main prescriptions from Full_progression_overview (every week has a %1RM RANGE, e.g. 70–75%, not a single %).",
+      "issue": "The source never specifies which point in the range to use for a given set, and per user instruction this must not be interpreted as an intra-workout ramp.",
+      "resolution": "Stored as percentRange {min, max}. The active workout screen computes and displays the full kg range and defaults the editable target to the range midpoint, clearly labeled as a default, not a prescription. The lifter chooses/edits the actual number before confirming a set.",
+      "status": "resolved-with-default"
+    }
+  ],
+
+  "exerciseAliases": {
+    "deadlift": ["Deadlift"],
+    "snatch-grip-deadlift": ["SGDL", "Snatch Grip Deadlift", "Snatch-Grip Deadlift", "Deficit / Snatch-grip Deadlift", "Deficit / Snatch Deadlift"],
+    "back-squat": ["Back Squat", "Squat"],
+    "romanian-deadlift": ["Romanian Deadlift", "RDL"],
+    "bench-press": ["Bench Press"],
+    "incline-bench-press": ["Incline Bench Press"],
+    "leg-press-high-foot": ["Leg Press (High Foot Placement)"],
+    "hack-squat": ["Hack squat"],
+    "core-ab-wheel": ["Core (Ab wheel / Leg raises)", "Core (Ab wheel / Cable crunch)"],
+    "landmine-press": ["Landmine press", "Landmine Press"],
+    "pull-row-neutral": ["Pull/Row (Neutral grip)", "Neutral Grip Row"],
+    "db-row": ["DB Row"],
+    "face-pulls": ["Face pulls", "Face Pulls"],
+    "triceps-dips": ["Triceps dips"],
+    "rope-triceps-pushdown": ["Rope Triceps Pushdown (Neutral Grip)", "Pushdowns"],
+    "overhead-rope-extension": ["Overhead rope extension", "Overhead Rope Triceps Extension"],
+    "wrist-extensor-stretch": ["Wrist Extensor Stretch"],
+    "single-leg-leg-press": ["Single leg legpress"],
+    "hamstring-curl": ["Hamstring Curl"],
+    "core-plank": ["Core / Plank"],
+    "bulgarian-split-squat": ["Bulgarian Split Squat"],
+    "pendlay-row": ["Pendlay Row"],
+    "chest-supported-row": ["Chest-supported Row (Neutral Grip)"],
+    "straight-arm-pulldown": ["Straight-arm Pulldown (Cable/Band)"],
+    "isometric-biceps-hold": ["Isometric Biceps Hold (Band)"],
+    "reverse-curl": ["Reverse Curl (Light Band/Dumbbell)"]
+  }
+}

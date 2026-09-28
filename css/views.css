@@ -1,0 +1,443 @@
+.dashboard > .card:last-child { margin-bottom: 0; }
+
+@media (max-width: 420px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Account section (Profile) ──────────────────────────────────────────
+   A simple label/value row; wraps naturally at any width since both sides
+   are short fixed words ("Role"/"Admin"), no overflow risk. */
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.account-row:last-of-type { border-bottom: none; }
+
+/* ── Backup & Data exports (Phase 3D) ────────────────────────────────────
+   Full-width, stacked buttons (mobile-first, no horizontal layout to
+   overflow on a phone) with a small gap between them. */
+.btn-stack { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* ── Restore My Data (Phase 3F) ───────────────────────────────────────────
+   `.card-danger` gives the Restore card a visually distinct (destructive)
+   border, at a glance different from the plain `.card-primary` Backup
+   card just above it, satisfying "Restore must visually communicate that
+   it is destructive" without needing a whole second card component.
+   `.btn-danger` reuses the existing `.btn` base (full-width/48px min
+   height already, so no separate mobile handling is needed) with the
+   project's existing `--danger` token (tokens.css) for its background. */
+.card-danger { border-color: var(--danger); }
+.btn-danger { background: var(--danger); color: var(--accent-text-on); }
+.btn-danger:hover { filter: brightness(1.08); }
+.btn-danger:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Access control (Phase 3C): pending / disabled / error screens ────── */
+.access-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+.access-card { max-width: 360px; width: 100%; text-align: center; }
+.access-title { font-size: 1.4rem; margin-bottom: var(--space-3); }
+.access-body { color: var(--text-secondary); margin-bottom: var(--space-4); }
+.access-email { margin-bottom: var(--space-5); word-break: break-word; overflow-wrap: anywhere; }
+.access-card .btn + .btn { margin-top: var(--space-3); }
+
+/* ── Admin (Phase 3C) ───────────────────────────────────────────────────
+   Cards stack full-width (mobile-first, no table) — the .card/.btn base
+   already handles small screens; only admin-specific layout is added
+   here. Long emails wrap rather than causing horizontal scroll. */
+.admin-view h3 { margin-top: var(--space-5); }
+.admin-row { display: flex; flex-direction: column; gap: var(--space-3); }
+.admin-row-main { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.admin-row-main > div { min-width: 0; }
+.admin-row-main .card-title, .admin-row-main .card-sub {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.avatar-sm { border-radius: 50%; flex-shrink: 0; }
+.admin-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.admin-actions .btn { width: auto; flex: 1 1 120px; }
+
+/* ── Admin Dashboard / User Detail (Phase 3F) ────────────────────────────
+   Reuses .stat-grid/.stat-card (components.css) and .card/.admin-row
+   (above) as-is — only the few NEW pieces (the training summary line on a
+   user-list row, and the read-only per-set rows in Workout Detail) get
+   their own rules here. Cards already stack full-width with no table, so
+   nothing further is needed for mobile; the set-row grid below mirrors
+   the active logger's own .set-row column proportions (below) but drops
+   the input/check-button columns since this is read-only display, not an
+   editable form. */
+.admin-training-line { margin-top: var(--space-1); }
+
+.admin-readonly-set-table { display: flex; flex-direction: column; gap: var(--space-2); }
+.admin-readonly-set {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 28px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+.admin-readonly-set.is-complete { border-color: var(--success); background: rgba(111, 174, 122, 0.1); }
+.admin-readonly-set .set-index { text-align: center; }
+
+/* ── Workout logger (Phase 3B; prescription-summary line removed Phase 3E.1
+   — no new CSS needed: `.card-title`'s existing bottom margin and `p`'s
+   existing zero top-margin (see css/base.css) already make the title flow
+   straight into notes/set-table with no gap, now that the removed
+   `.card-sub` div is simply gone rather than emptied). */
+
+.set-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 44px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.set-row.is-complete { border-color: var(--success); background: rgba(111, 174, 122, 0.1); }
+
+.set-index { color: var(--text-secondary); font-size: 0.8rem; text-align: center; }
+
+.set-input {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 1rem;
+  text-align: center;
+  padding: 0 var(--space-1);
+}
+.set-input-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  background: transparent;
+  border-style: dashed;
+}
+
+.set-check {
+  min-height: 40px;
+  min-width: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.set-check.is-complete { background: var(--success); border-color: var(--success); color: var(--accent-text-on); }
+
+#autosave-status { text-align: center; }
+
+/* ── Avatar fallback (Phase 4 polish item, carried over from Phase 3F) ────
+   Matches the `<img>` it replaces (see js/utils/dom.js's
+   wireAvatarFallbacks) so a broken/expired Google profile photo URL never
+   shows the browser's native broken-image icon. */
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.avatar-fallback svg { width: 60%; height: 60%; }
+
+/* ── Program (Phase 4) ───────────────────────────────────────────────────
+   Mobile-first: weeks render as native <details>/<summary> (no JS needed
+   for expand/collapse — Part B's "progressive navigation" requirement),
+   days within an open week stack as full-width tappable rows. Reuses
+   .card/.card-primary/.card-notice/.form-row/.field/.admin-actions
+   (components.css) as-is for everything else on the Program/Day/Editor
+   screens — only the pieces with no existing equivalent get rules here. */
+.program-view details.card { padding: 0; overflow: hidden; }
+.program-view details.card > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: var(--space-4);
+  list-style: none;
+}
+.program-view details.card > summary::-webkit-details-marker { display: none; }
+.program-view details.card > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--space-2);
+  transition: transform 0.15s ease;
+}
+.program-view details.card[open] > summary::before { transform: rotate(90deg); }
+
+.program-day-list { display: flex; flex-direction: column; }
+.program-day-row {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text-primary);
+  min-height: 48px;
+}
+.program-day-row.is-current { background: rgba(201, 161, 90, 0.1); font-weight: 600; }
+
+/* Phase 4 UI correction pass: a dynamic warm-up preview is a short stack of
+   one line per set (W1, W2, ...) — tighten the default <p> spacing so it
+   reads as one compact ramp, not a series of loosely spaced paragraphs. */
+.program-warmup-preview p { margin: 2px 0; }
+
+.badge-active {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-text-on);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+/*
+ * Phase 5B, Package 1 — PR (Personal Record) badge. Uses the pre-existing
+ * `--pr-glow` token (css/tokens.css already defined this and nothing had
+ * used it before this pass) rather than reusing `--accent`/`.badge-active`,
+ * so a "PR" badge reads as its own distinct, celebratory event rather than
+ * being visually confused with the unrelated "this is your active
+ * program" badge. Never shown for a Baseline (a Baseline is not a PR — see
+ * js/utils/prAnalytics.js's own module comment) and never for a
+ * warmup/incomplete/skipped/not-logged set, since those never reach the PR
+ * engine at all.
+ */
+.badge-pr {
+  display: inline-block;
+  background: var(--pr-glow);
+  color: var(--accent-text-on);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+/* History detail's per-PR breakdown lines (js/views/history.js's
+   prDetailListHtml) and Progress's "Recent PRs" list (js/views/progress.js)
+   — one line per event, small and muted so it reads as supplementary detail
+   rather than competing with the card's own headline number. The
+   Tested/Estimated distinction is carried entirely in the TEXT
+   (prAnalytics.js's prTypeLabel: "Tested 1RM PR" vs "Estimated 1RM PR"),
+   never by color alone, per this package's explicit "must be unambiguous"
+   requirement. */
+.pr-detail-list, .pr-recent-list { margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+.pr-detail-list li, .pr-recent-list li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+.pr-detail-list li strong, .pr-recent-list li strong { color: var(--text-primary); font-weight: 600; }
+.pr-estimated-tag { color: var(--text-tertiary); font-size: 0.75rem; }
+
+/* Progress's Current/Tested/Estimated 1RM suggestion line — styled like the
+   existing `.card-notice` accent-bordered treatment used elsewhere in this
+   app. Package 1 used this only for a passive text notice. Package 2 reuses
+   the same box (no new CSS) for the "Update Current 1RM" action/confirm
+   panel too (see progress.js's wireUpdateAction) — buttons inside it are
+   plain `.btn`/`.btn-stack`, unstyled by this rule itself. */
+.pr-suggestion {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(232, 194, 106, 0.08);
+  border: 1px solid var(--pr-glow);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+/* ── Progress (Phase 4) ──────────────────────────────────────────────────
+   Plain inline SVG trend charts, no chart library. `.sparkline` scales the
+   fixed viewBox to the card's own width (mobile-first, no horizontal
+   overflow inside .view-outlet's existing max-width) — the *point*
+   coordinates are computed in physical viewBox units by
+   progressAnalytics.js's buildSparklinePoints, this rule just lets the
+   whole drawing stretch/shrink to fit. */
+.sparkline { display: block; width: 100%; height: auto; margin-top: var(--space-2); }
+.sparkline-range { display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: var(--space-1); }
+.sparkline-single { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); color: var(--text-secondary); font-size: 0.85rem; }
+.sparkline-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Progress (Phase 5C, Package 1) — interactive chart Y-axis + tooltip.
+   `.chart-wrap` is `position: relative` so `.chart-tooltip` (absolutely
+   positioned by progress.js's wireChartTooltip, in JS pixel units measured
+   against this same wrapper) has a positioning context that tracks the
+   card's own real rendered width — this is what keeps the tooltip inside
+   the card at both 384px and the 320px stress width, rather than escaping
+   into the page. */
+.chart-wrap { position: relative; }
+.chart-gridline { stroke: var(--border); stroke-width: 1; }
+.chart-tick-label { fill: var(--text-tertiary); font-size: 7.5px; }
+/* The visible dot never changes; `.chart-hit` is the much larger transparent
+   circle layered on top of it that actually receives hover/focus/tap (spec
+   section 5) — `cursor: pointer` signals it's interactive even though
+   nothing is visibly there beyond the small dot underneath. */
+.chart-hit { cursor: pointer; }
+.chart-hit:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chart-hit:focus:not(:focus-visible) { outline: none; }
+.chart-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  max-width: 200px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  pointer-events: none; /* never itself blocks hover/tap on the chart underneath */
+}
+.chart-tooltip[hidden] { display: none; }
+.chart-tooltip-title { color: var(--text-secondary); font-size: 0.72rem; margin-bottom: 2px; }
+/* Spec/dataviz convention: the value leads (bold, primary ink), any
+   secondary context line (e.g. "from 50 kg × 10") follows, muted. */
+.chart-tooltip-line { color: var(--text-primary); font-weight: 600; }
+.chart-tooltip-line ~ .chart-tooltip-line { color: var(--text-secondary); font-weight: 400; margin-top: 1px; }
+
+/* ── Progress (Phase 5C, Package 1) — "Current 1RM History". A CSS-Grid
+   div table (this app's own established mobile-first tabular pattern —
+   see .set-table/.set-row above), never a native <table>, so column widths
+   are guaranteed to fit a 320px card with no horizontal scroll. */
+.history-table { display: flex; flex-direction: column; margin-top: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.history-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 0.7fr;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.history-row:last-child { border-bottom: none; }
+.history-row-head { background: var(--surface-raised); color: var(--text-secondary); font-size: 0.72rem; font-weight: 600; }
+
+/* ── Workout Completion State + Post-Completion Editing (Phase 4.1) ────── */
+.badge-warning {
+  display: inline-block;
+  background: var(--danger);
+  color: var(--accent-text-on);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+/* Browser-test correction pass: an explicit Skip is a DELIBERATE action,
+   not a warning — a neutral/muted pill (the same "quiet" palette as
+   .admin-readonly-set, rather than any status color) keeps it clearly
+   distinct from the red .badge-warning above at a glance, without implying
+   something went wrong. */
+.badge-skip {
+  display: inline-block;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+/* One extra grid row beneath a .set-row for the RPE/note inputs the
+   completed-workout edit mode adds (js/views/history.js) — the live
+   in-progress logger doesn't render this row at all, so it stays scoped to
+   History's own edit mode rather than changing .set-row's own 4-column
+   grid (js/views/workout.js untouched). */
+.set-row-extra {
+  display: grid;
+  grid-template-columns: 28px 1fr 2fr;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+  margin-top: calc(var(--space-2) * -1);
+}
+.set-row-extra .set-rpe { grid-column: 2; }
+
+/* ── History list: one workout = one card (FINAL POLISH PASS) ───────────
+   Previously every completed workout was a bare `.admin-row` (no border,
+   no background, no margin of its own) packed inside ONE shared `.card`
+   — functionally fine, but "multiple workouts visually run into each
+   other" (the exact complaint this replaces). Each workout now gets its
+   OWN `.card` — reusing that existing class's background/border/radius/
+   spacing wholesale (its `margin-bottom: var(--space-4)` is what gives
+   "clear spacing between workouts", with no new spacing rule needed here)
+   rather than inventing a second visual language for "a card". `.card` is
+   applied directly to the row's own `<a>` so the ENTIRE card is the click
+   target, same navigation behavior as before, just a bigger hit area. */
+.history-list { display: block; }
+.history-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+/* Mirrors .card's own last-child convention elsewhere in this file (e.g.
+   .dashboard > .card:last-child) — no dangling gap below the last card. */
+.history-list > .history-item:last-child { margin-bottom: 0; }
+.history-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap; /* a long day name + a badge never forces horizontal overflow */
+}
+.history-item-title {
+  font-weight: 600;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere; /* long program/workout names wrap cleanly */
+}
+/* Badge/skip-reason/timing are all "visually secondary" to the title —
+   smaller, muted text, and (being inside this SAME card) always clearly
+   associated with the correct workout, never at risk of drifting onto a
+   neighboring one the way two adjacent bare rows could read as ambiguous. */
+.history-item-sub {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.history-item-reason {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  word-break: break-word;
+  overflow-wrap: anywhere; /* a long skip reason wraps cleanly, never overflows */
+}
+.history-item-time {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+/* Mobile-first already covers the common case above (flex-wrap + word-
+   break need no viewport check to work), but a narrow phone screen still
+   gets a touch less internal padding so more of a long title/subline is
+   visible per line without feeling cramped against the card edge. */
+@media (max-width: 420px) {
+  .history-item { padding: var(--space-3); }
+  .history-item-head { gap: var(--space-1); }
+}
+.set-row-extra .set-note { grid-column: 3; text-align: left; }

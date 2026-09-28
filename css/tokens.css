@@ -1,0 +1,42 @@
+:root {
+  /* Surfaces */
+  --bg: #121212;
+  --surface: #1c1c1e;
+  --surface-raised: #232325;
+  --border: #2e2e30;
+
+  /* Text */
+  --text-primary: #f2f2f0;
+  --text-secondary: #98989c;
+  --text-tertiary: #6b6b6f;
+
+  /* Accent — a brass/iron tone rather than a stock vermilion or acid green */
+  --accent: #c9a15a;
+  --accent-strong: #ddb972;
+  --accent-text-on: #1a1408;
+
+  /* Status */
+  --success: #6fae7a;
+  --danger: #d9695f;
+  --pr-glow: #e8c26a;
+
+  /* Type */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', var(--font-ui);
+
+  /* Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --nav-height: 64px;
+  --header-height: 56px;
+}
