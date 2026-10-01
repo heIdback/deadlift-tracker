@@ -5,6 +5,8 @@
 // hand-built export object, with no Firebase import in the loop at all.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { resolveSetStatus } from './setLogging.js';
+
 /**
  * Flattens `export.workouts` into one row per logged SET (not one row per
  * workout), which is what's actually useful for spreadsheet analysis —
@@ -42,6 +44,9 @@ export function flattenWorkoutsForCsv(exportData) {
           note: set.note,
           completed: set.completed,
           completedAt: set.completedAt,
+          // v1.1: completed | modified | failed | skipped ('' = not logged),
+          // resolved the same way History shows it (old sets included).
+          setStatus: resolveSetStatus(set) ?? '',
         });
       }
     }

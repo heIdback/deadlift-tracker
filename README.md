@@ -510,6 +510,7 @@ users/{uid}/maxes/{id}                 append-only 1RM history
 
 users/{uid}/programs/{programId}       template (layer 1)
   name, sourceFile, roundingRules, weeks[], exerciseLibrary[], importReviewFlags[]
+  version?, importSource? ('json'|'csv'), importedAt?, notes?, decisionRules[]?  // v1.1, optional
 
 users/{uid}/programs/{programId}/days/{dayId}
   order, name, sections: { warmup, main[], accessory[], cooldown }
@@ -520,6 +521,8 @@ users/{uid}/programRuns/{runId}        planned (layer 2)
 users/{uid}/workouts/{workoutId}       completed log (layer 3) — Phase 3 writes these
   status, runId, program/week/day name snapshots, startedAt, finishedAt,
   durationSec, exercises: { entryId: {...sets[]} }
+  sets[]: plannedKg, plannedReps (frozen plan), actualKg, actualReps, rpe, note,
+          completed, completedAt, status? ('completed'|'modified'|'failed'|'skipped') // v1.1
 
 users/{uid}/records/{exerciseId}       derived PR cache — Phase 4
 users/{uid}/progressionSuggestions/{id}  — Phase 4
@@ -528,6 +531,9 @@ users/{uid}/nutrition/{date}           reserved, unused in v1
 ```
 
 ## 15. How to create additional workout programs
+
+**v1.1: use Program → Import Program** (JSON or CSV) — see §20. The
+notes below describe the older, code-level route.
 
 Nothing about the schema is deadlift-specific. To add a second program:
 
@@ -1271,3 +1277,221 @@ Phase 5B Package 1 + correction suite (43 checks), the Package 2 suite
 source), and every other project exec suite (`history_exec_test`, the
 loader-based `exec_test_5a`/`exec_access2`/`exec_start3` suites) were
 re-run and remain unchanged.
+
+
+## 20. v1.1 (app 1.1.0, cache v22) — Program Import, actual-set logging, heldback branding
+
+### Program Import (Program → Import Program)
+Choose a `.json` or `.csv` file → it is parsed and validated in the browser
+(`js/utils/programImport.js`, nothing written) → a preview shows name,
+version, id, weeks (deload/PR weeks), days and their exercises, load types,
+which %-loads need a 1RM you don't have yet, and rounding → **Import Program**
+writes it in ONE Firestore transaction (`programService.importProgram`).
+
+- It only ever **adds** `users/{uid}/programs/{newId}` + its `days`. Workouts,
+  1RM history, bodyweight, programRuns, the profile and every existing
+  program are never read-modified. The new program is not activated;
+  choose **Set Active** when ready.
+- An existing program id is **never overwritten**: the preview asks for a
+  new id first, and the transaction re-checks at write time.
+- Any validation error blocks the whole file (no partial import); errors
+  name the row / week / day / exercise.
+- Untrusted input: whitelisted fields only; ownership/access fields (`uid`,
+  `role`, `status`, `permissions`, …) are rejected; ids are strict slugs
+  (no Firestore path injection); text is length-capped and always rendered
+  escaped. A "Backup My Data" file is recognized and pointed to Restore.
+- Not Backup/Restore: Program Import adds one training program; Restore
+  restores an account backup.
+
+**JSON** is the native format — the same shape as
+`data/program.deadlift-8wk.json` (flat, `week-percent-range` and
+`block-driven` entries, warm-up ramps, RPE, notes). Optional `version`;
+`programId` is accepted as an alias of `id`. The packaged program itself is
+a valid import file and produces identical workouts.
+
+**Accepted JSON (everything else is ignored with a warning; ownership/access
+fields are an error):**
+
+```text
+{
+  schemaVersion?: 1,
+  id | programId: slug            // lowercase a-z 0-9 '-', ≤ 64; derived from name if absent
+  name: text ≤120,  version?: text|number ≤40,  sourceFile?: text ≤120,  generatedBy?: text,
+  currentOneRepMaxesAtImport?: { exerciseId: kg }   // stored for reference only — NEVER applied to your 1RMs
+  notes?: text ≤2000,  decisionRules?: text[] (≤30, each ≤300),
+  roundingRules?: { barbell, dumbbell, machine, bodyweight: 0–50 },
+  exerciseLibrary?: [{ id: slug, name, aliases?: text[], cue?: text }],
+  weeks: [{ week: 1..N (no gaps), isDeload?, isPrAttempt?, cycle?,
+            focusFromOverview?, deadliftNotesFromBlock?, notes? }],   // "_x" keys = comments, dropped
+  days: [{ id?: slug, order: 1–99 unique, name: text ≤80,
+           sections: { warmup?: {source?, text}, cooldown?: {source?, text},
+                       main?: Entry[], accessory?: Entry[] } }]       // ≥1 exercise per day
+}
+Load  = {type:'none'} | {type:'bodyweight'} | {type:'fixed', kg:0–500, perHand?, note?}
+      | {type:'percent', percent:0<p≤3, of?: slug} | {type:'percentRange', min, max, of?}
+      | {type:'sets', sets:[{kg, reps}] ≤15}   // flat entries only: explicit warm-up ramp, fixed kg
+Entry (flat)  = { exerciseId, displayName, sets 1–50, reps?: n | {min,max}, durationSec?,
+                  load?: Load, notes?, rpe?: 0–10, rir?: 0–10, weeks: [week…] }
+Entry ('week-percent-range') = { exerciseId, displayName, structure,
+                  weeklyVariants: [{ week, load: percent|percentRange }],
+                  setsReps: { "<week>": "4x5" | "3x6-8" } }
+Entry ('block-driven') = { exerciseId, displayName, structure, weeklyVariants: [{
+                  week, isDeload?, isPrAttempt?, notes?,
+                  topSingle?|backoff?|sgdl?: { sets (0/null = not this week), reps?,
+                             load: percent, note?, sourceWeightKgAtImport? (topSingle) },
+                  warmupSets?: [{ kg, reps }] (≤15) }] }
+```
+
+**Program-level notes & decision rules (JSON only):** optional `notes`
+(text, ≤ 2000 chars) and `decisionRules` (list of ≤ 30 texts, ≤ 300 chars
+each), shown on the Program screen. Plain text — never interpreted.
+
+**CSV** — one row per exercise, per day, per week. Identical prescriptions
+across weeks are merged into one entry. Column names are case-insensitive.
+
+> **CSV limitation (by design):** CSV produces *flat* entries only — fixed
+> kg, % of 1RM, % range, bodyweight, timed holds, rep ranges, RPE/RIR,
+> notes. These are **JSON-only**: `block-driven` lifts (top single + backoff
+> + snatch-grip + 1RM-scaled warm-up ramp), `week-percent-range` blocks,
+> the exercise library/cues, and program `notes`/`decisionRules`. Programs
+> like the built-in Deadlift program must be imported as JSON.
+
+| Column | Req. | Meaning |
+|---|---|---|
+| programId | ✓ | lowercase-hyphen id, same on every row |
+| programName | ✓ | same on every row (may be blank after the first) |
+| version | | label, e.g. `2` |
+| week | ✓ | 1, 2, 3… no gaps |
+| deload / prAttempt | | `true` on that week's rows |
+| dayOrder | ✓ | 1, 2, 3… |
+| dayName | ✓ | same for a dayOrder in every week |
+| dayId | | optional stable id (else generated) |
+| section | | `main` (default) or `accessory` |
+| exerciseOrder | ✓ | position in the day |
+| exerciseId | ✓ | e.g. `deadlift` — links 1RMs/progress |
+| exerciseName | ✓ | shown in the app |
+| sets | ✓ | 1–50 |
+| reps | | `5` or `6-8`; blank for timed holds |
+| durationSec | | seconds per set |
+| loadType | ✓ | `none` \| `bodyweight` \| `fixed` \| `percent` \| `percentRange` |
+| loadValue | | fixed: kg · percent: `75` · percentRange: `70-75` |
+| loadUnit | | `kg`, `kg/hand`, or `%` |
+| percentOf | | exerciseId whose 1RM a % uses (default: itself) |
+| rpe / rir | | targets, 0–10 |
+| notes | | shown with the exercise |
+
+`restSec` is not part of this app's program model (rest is a global
+setting) and is ignored with a warning. A template is downloadable from the
+import screen.
+
+### Actual-set logging
+Each set row keeps the frozen plan (`plannedKg`/`plannedReps`) and the
+actual result (`actualKg`/`actualReps`, prefilled to the plan). New optional
+`status`: **completed** (as planned), **modified** (weight/reps changed —
+derived automatically), **failed** (explicit; achieved values recorded; an
+untouched rep count is cleared so a failed set can't claim the planned
+reps), **skipped** (explicit; not performed). Plus actual `rpe` and `note`.
+
+- Logger: tap ✓ as before; edit weight/reps if different; **⋯** opens
+  Failed / Skip set / RPE / note.
+- A failed set does not fail the workout (still "complete"); a skipped set
+  makes it "partial".
+- History shows set-by-set actuals, with "Planned …" when different; the
+  existing Edit Workout mode has the same controls.
+- Performance analytics (Progress charts, PRs, e1RM, volume) use only
+  **completed** and **modified** sets, with their actual values. **Failed**
+  and **skipped** sets are kept in the workout and shown in History, but
+  never produce a performance or e1RM point — even with actual weight/reps
+  entered. Stored 1RMs never change automatically.
+- Corrections: `updateCompletedWorkoutLog` now also rejects any change to
+  plan/identity data **inside** `exercises` (Rules can't inspect arrays).
+- **No migration, `schemaVersion` stays 1**: the field is additive and
+  optional; old sets resolve their status from their own values.
+
+### Firestore rules
+Unchanged. The only new writes are a new program (+days) under the owner's
+own `programs/` — already owner-only — and the new set fields inside
+`exercises`, which the existing workout rules already treat as actual
+logging data. `tests/rules/` pins these protections against the emulator.
+
+### Canonical Deadlift 210 (7-Week Block)
+`tests/fixtures/program.deadlift-210-7wk.json` (read-only, SHA-256 pinned in
+the tests) imports with no errors or warnings, is stored identical to the
+file, and all 7 × 4 = 28 generated workouts are verified field by field
+(`tests/unit/deadlift210Canonical.test.mjs`).
+
+Stored but **not displayed** anywhere in the app today (pre-existing UI
+scope, unchanged): week `focusFromOverview` / `deadliftNotesFromBlock`,
+day warm-up/cool-down `text`, exercise-library `cue`s, `generatedBy`,
+`currentOneRepMaxesAtImport` (shown only in the import preview).
+
+**Target RPE:** a flat entry's `rpe` (e.g. Deadlift W1–W5 RPE 6–8) is copied
+into new workout snapshots as `exercises[].prescribed.targetRpe` (only when
+the program has one) and shown as "Target RPE n" in the workout preview,
+the live logger and History. It is prescription metadata only — never the
+set's actual `rpe`, and not used by completion state, PRs, e1RM, volume,
+top weight, Current 1RM or Progress. Snapshots created before this change
+are not rewritten. Block-driven RPE/test instructions stay in `notes`.
+
+The Program day editor shows a flat warm-up ramp read-only and always keeps
+it exactly as stored.
+
+### Other
+- `#/import` (an old placeholder route whose view never existed) now
+  redirects to Program → Import Program.
+- Home shows "Week N / <the program's own number of weeks>" (was a
+  hard-coded "/ 8").
+
+### Admin → Reset training data (Cloud Function)
+Admin → open a user → **Reset training data…**. Firestore rules give admins
+read-only access to other users and are **unchanged**, so the reset runs on the
+server: callable function `adminResetUserFitness` (`functions/`, Admin SDK).
+
+- **Server checks:** signed in; caller's `/access` doc is `approved` + `admin`
+  (never a client-sent role); target uid well-formed and has an `/access` doc;
+  payload is exactly `{targetUid, confirmation}`; `confirmation` equals
+  `RESET <target email>` (or `RESET <uid>` with no email). A per-target lock
+  (`adminResets/{uid}`) refuses a second concurrent reset.
+- **Removed:** all workouts (any status), `maxes` (1RM history), `measurements`,
+  `records`, `progressionSuggestions`, all `programRuns`; profile
+  `currentMaxes` → `{}` (the user re-enters the 4 required 1RMs at next sign-in,
+  exactly like a new account; import-time 1RMs are never used).
+- **Kept:** Auth user, `/access` (status/role), profile identity/settings/
+  training profile, every program incl. imported ones, nutrition, global config.
+- **Program:** the active program stays active as a new run
+  `reset-run-<generation>` at Week 1 / first day. No active program → none is started.
+- **Not atomic** (Firestore batches ≤ 500 writes). Deletes go in bounded batches;
+  the profile/program step is last; the server re-verifies that everything is
+  empty before reporting success. Any failure → "did NOT complete"; running it
+  again is idempotent and finishes the job. Each run writes `adminAudit/{id}`
+  (admin uid, target uid, time, result, counts — no secrets).
+
+**Stale devices (open tab, offline phone, cached app).** Every successful
+reset gives the user a new *training generation*: `users/{uid}.trainingGeneration`
+(random token) plus a sentinel doc
+`users/{uid}/progressionSuggestions/__training-generation-<token>`, swapped in
+the reset's final batch. Every client write of training state — Start,
+autosave, Finish, Skip, set/RPE corrections, current-1RM saves, bodyweight,
+program-run position/switch — is committed as a batch that also `update()`s
+the device's own generation sentinel (`js/services/trainingGenerationService.js`).
+After a reset that sentinel is gone, so **Firestore rejects the whole batch on
+the server**, including writes queued offline and replayed later or after a
+refresh. The device then checks the generation (on boot, reconnect, tab focus,
+navigation, or any rejected write), refuses further training writes, shows
+"Your training data was reset by an admin. Loading your fresh start…", drops
+its local workout marker and reloads from the server. No rules change.
+Backups never include sentinels; restore never deletes or recreates one.
+Known residual: a device whose *only* session on this version was offline has
+no confirmed sentinel yet; until it has been online once, its queued 1RM and
+bodyweight writes are unguarded (workout and run writes are still rejected,
+because the reset deleted their documents).
+
+**Deploy (new, separate step — the hosting workflow is unchanged):** requires
+the Blaze plan. Once: `cd functions && npm install`. Then, when the function
+changes: `firebase deploy --only functions`. Hosting still deploys with
+`firebase deploy --only hosting:production`.
+
+### Tests
+See `tests/README.md`. `tests/rules/` needs the Firebase emulator (Java +
+firebase-tools); it skips itself otherwise and has **not** been run in the
+sandbox this was built in.

@@ -53,6 +53,7 @@ import { doc, getDoc, getDocs, collection } from 'https://www.gstatic.com/fireba
 import { db } from '../core/firebase.js';
 import { APP_META } from '../../config/app.config.js';
 import { serializeForExport, serializeDoc, serializeDocs } from '../utils/exportSerialize.js';
+import { isGenerationSentinelId } from '../utils/trainingGeneration.js';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -130,7 +131,10 @@ export async function buildUserDataExport(currentUser) {
     fetchAccountRecord(uid),
     fetchProfile(uid),
     fetchProgramsWithDays(uid),
-    ...USER_SUBCOLLECTIONS.map((name) => getDocs(userSubcollectionRef(uid, name)).then(serializeDocs)),
+    // v22: the admin-reset generation sentinel is device-sync bookkeeping,
+    // not user data — never exported (so a restore can't bring an old one back).
+    ...USER_SUBCOLLECTIONS.map((name) => getDocs(userSubcollectionRef(uid, name))
+      .then(serializeDocs).then((docs) => docs.filter((d) => !isGenerationSentinelId(d.id)))),
   ]);
 
   const bySubcollection = Object.fromEntries(

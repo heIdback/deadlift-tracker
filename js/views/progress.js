@@ -711,7 +711,7 @@ function aboutEstimated1RMHtml() {
       <summary style="cursor:pointer">About Estimated 1RM</summary>
       <p style="margin:8px 0 0">
         Estimated 1RM uses the Epley formula — <code>e1RM = weight × (1 + reps ÷ 30)</code> —
-        applied only to completed working sets (warm-up ramps and incomplete sets are excluded).
+        applied only to completed working sets (warm-up ramps, incomplete, failed and skipped sets are excluded).
         For example, ${formatKg(100)} × 5 reps → an estimated ${formatKg(example)} 1RM.
         A completed single rep is shown as a Tested 1RM, not an estimate.
       </p>

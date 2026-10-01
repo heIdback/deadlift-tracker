@@ -1,7 +1,7 @@
 {
   "name": "Deadlift Tracker",
   "short_name": "Deadlift",
-  "description": "Warm-up-first deadlift program tracker with offline-capable workout logging.",
+  "description": "Warm-up-first deadlift program tracker with offline-capable workout logging. By heldback.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -20,6 +20,7 @@ import { listProgramRuns, getProgramDays } from './programService.js';
 import { getInProgressWorkout } from './workoutService.js';
 import { planSetActiveProgram } from '../utils/programSwitch.js';
 import { pickStarterPosition } from '../utils/starterProgram.js';
+import { commitTrainingBatch } from './trainingGenerationService.js';
 
 const runsCol = (uid) => collection(db, 'users', uid, 'programRuns');
 
@@ -82,7 +83,7 @@ export async function setActiveProgram(uid, programId) {
       });
     }
 
-    await batch.commit();
+    await commitTrainingBatch(uid, batch); // v22: admin-reset generation guard
     return { ok: true, alreadyActive: false, runId };
   });
 }

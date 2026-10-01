@@ -1,6 +1,6 @@
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, addDoc, query, orderBy, limit, getDocs,
+  collection, query, orderBy, limit, getDocs, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
@@ -8,6 +8,7 @@ import { getDocSafe } from '../utils/firestoreRead.js';
 import { isOfflineUnavailableError } from '../utils/offlineError.js';
 import { DEFAULTS, APP_META } from '../../config/app.config.js';
 import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
+import { commitTrainingBatch } from './trainingGenerationService.js';
 
 const userDocRef = (uid) => doc(db, 'users', uid);
 const maxesColRef = (uid) => collection(db, 'users', uid, 'maxes');
@@ -95,17 +96,21 @@ export async function recordOneRepMax(uid, { exerciseId, kg, kind = 'training', 
   if (!exerciseId || typeof kg !== 'number' || kg <= 0) {
     throw new Error('recordOneRepMax requires a valid exerciseId and a positive kg value.');
   }
+  // v22: one batch (history entry + currentMaxes cache together) committed
+  // with the admin-reset generation guard — see trainingGenerationService.js.
   await trackWrite(async () => {
-    await addDoc(maxesColRef(uid), {
+    const batch = writeBatch(db);
+    batch.set(doc(maxesColRef(uid)), {
       exerciseId,
       kg,
       kind, // 'tested' | 'training'
       effectiveDate: serverTimestamp(),
       source, // 'manual' | 'workout:<workoutId>' | 'import' | 'tested_pr'
     });
-    await updateDoc(userDocRef(uid), {
+    batch.update(userDocRef(uid), {
       [`currentMaxes.${exerciseId}`]: { kg, kind, updatedAt: serverTimestamp() },
     });
+    await commitTrainingBatch(uid, batch);
   });
 }
 

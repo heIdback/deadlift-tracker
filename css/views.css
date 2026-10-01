@@ -362,19 +362,8 @@
   border-radius: 999px;
   vertical-align: middle;
 }
-/* One extra grid row beneath a .set-row for the RPE/note inputs the
-   completed-workout edit mode adds (js/views/history.js) — the live
-   in-progress logger doesn't render this row at all, so it stays scoped to
-   History's own edit mode rather than changing .set-row's own 4-column
-   grid (js/views/workout.js untouched). */
-.set-row-extra {
-  display: grid;
-  grid-template-columns: 28px 1fr 2fr;
-  gap: var(--space-2);
-  padding: 0 var(--space-2) var(--space-2);
-  margin-top: calc(var(--space-2) * -1);
-}
-.set-row-extra .set-rpe { grid-column: 2; }
+/* (v1.1: the old .set-row-extra RPE/note row was replaced by the shared
+   set block's ⋯ panel — see "Actual-set logging" below.) */
 
 /* ── History list: one workout = one card (FINAL POLISH PASS) ───────────
    Previously every completed workout was a bare `.admin-row` (no border,
@@ -440,4 +429,130 @@
   .history-item { padding: var(--space-3); }
   .history-item-head { gap: var(--space-1); }
 }
-.set-row-extra .set-note { grid-column: 3; text-align: left; }
+
+/* ── v1.1 — Actual-set logging (js/components/setResult.js) ─────────────
+   A set is a `.set-block`: the existing .set-row (now with a 5th, narrow ⋯
+   column), a one-line status summary, and a hidden detail panel. Status
+   colors reuse the existing tokens: success (done), accent (modified),
+   danger (failed), muted/dashed (skipped). */
+.set-block { display: flex; flex-direction: column; gap: var(--space-1); }
+.set-row.has-more { grid-template-columns: 28px 1fr 1fr 44px 32px; }
+.set-row.is-modified { border-color: var(--accent); background: rgba(201, 161, 90, 0.10); }
+.set-row.is-failed { border-color: var(--danger); background: rgba(217, 105, 95, 0.10); }
+.set-row.is-skipped { border-style: dashed; background: transparent; }
+.set-row.is-skipped .set-input { color: var(--text-tertiary); }
+.set-check.is-modified { background: var(--accent); border-color: var(--accent); }
+.set-check.is-failed { background: var(--danger); border-color: var(--danger); color: var(--accent-text-on); font-weight: 700; }
+.set-more {
+  min-height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.set-more[aria-expanded="true"] { background: var(--surface); color: var(--text-primary); }
+.set-row-status {
+  font-size: 0.78rem;
+  padding: 0 var(--space-2) 0 calc(28px + var(--space-4));
+  overflow-wrap: anywhere;
+}
+.set-row-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-left: calc(28px + var(--space-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.set-row-detail[hidden] { display: none; }
+.set-detail-planned { font-size: 0.8rem; }
+.set-detail-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.set-detail-fields { display: grid; grid-template-columns: 72px 1fr; gap: var(--space-2); }
+.set-detail-fields .set-note { text-align: left; }
+.chip {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chip.set-fail-btn[aria-pressed="true"] { background: var(--danger); border-color: var(--danger); color: var(--accent-text-on); }
+.chip.set-skip-btn[aria-pressed="true"] { background: var(--surface); border-style: dashed; color: var(--text-secondary); }
+
+/* History — compact, read-only set-by-set actual results. */
+.history-set-table { display: flex; flex-direction: column; gap: var(--space-2); }
+.history-set {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+.history-set.is-complete { border-color: var(--success); background: rgba(111, 174, 122, 0.1); }
+.history-set.is-modified { border-color: var(--accent); background: rgba(201, 161, 90, 0.10); }
+.history-set.is-failed { border-color: var(--danger); background: rgba(217, 105, 95, 0.10); }
+.history-set.is-skipped { border-style: dashed; background: transparent; color: var(--text-secondary); }
+.history-set .set-index { text-align: center; }
+.history-set-status { text-align: right; white-space: nowrap; }
+.history-set-extra { grid-column: 2 / -1; font-size: 0.78rem; overflow-wrap: anywhere; }
+.set-status-text { font-size: 0.8rem; font-weight: 600; }
+.history-set.is-failed .set-status-text { color: var(--danger); }
+.history-set.is-modified .set-status-text { color: var(--accent); }
+
+/* ── v1.1 — Program Import (js/views/programImport.js) ─────────────────── */
+.program-import-entry { margin-top: var(--space-4); }
+.import-issues { margin: var(--space-2) 0 var(--space-3); padding-left: var(--space-4); }
+.import-issues li { margin-bottom: var(--space-1); overflow-wrap: anywhere; }
+.import-issues.is-error li { color: var(--danger); }
+.import-issues.is-warning li { color: var(--text-secondary); }
+.import-issue-where { font-weight: 600; }
+.import-help summary { cursor: pointer; font-weight: 600; }
+.import-columns { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-3) 0; }
+.import-column code { font-size: 0.85rem; }
+.import-column .text-muted { font-size: 0.8rem; }
+.import-day { padding: var(--space-2) 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.import-day:last-child { border-bottom: none; }
+.import-missing { color: var(--danger); }
+.import-conflict input { min-height: 44px; padding: 0 var(--space-2); }
+
+/* ── v1.1 — heldback branding: deliberately quiet ──────────────────────── */
+.login-byline { color: var(--text-tertiary); font-size: 0.85rem; margin: calc(var(--space-2) * -1) 0 var(--space-4); letter-spacing: 0.02em; }
+.about-line { color: var(--text-tertiary); font-size: 0.8rem; text-align: center; }
+
+/* v1.1: the logger row gained a narrow ⋯ column — give the number inputs
+   back their width: no desktop spin buttons (mobile browsers never show
+   them), and tighter gutters on small phones. */
+.set-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.set-input[type="number"]::-webkit-inner-spin-button,
+.set-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+@media (max-width: 380px) {
+  .set-row.has-more { grid-template-columns: 22px 1fr 1fr 40px 26px; gap: var(--space-1); padding: var(--space-1) var(--space-2); }
+  .set-row.has-more .set-input { padding: 0 2px; font-size: 0.95rem; }
+  .set-row-status { padding-left: calc(22px + var(--space-3)); }
+  .set-row-detail { margin-left: 0; }
+}
+/* History: a set that was never logged shows its prefilled numbers muted, so they don't read as performed. */
+.history-set.is-not-logged .history-set-actual { color: var(--text-tertiary); }
+.program-notes { white-space: pre-line; overflow-wrap: anywhere; }
+/* v1.1: prescribed target RPE under an exercise title (logger, preview, History). */
+.target-rpe { font-size: 0.85rem; margin: calc(var(--space-1) * -1) 0 var(--space-2); color: var(--accent); }
+.import-meta { text-align: right; overflow-wrap: anywhere; min-width: 0; }
+/* v1.1 — Admin "Reset training data" */
+.admin-reset h4 { margin: var(--space-3) 0 var(--space-1); }
+.reset-phrase code { display: inline-block; padding: var(--space-1) var(--space-2); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-wrap: anywhere; white-space: pre-wrap; user-select: all; }
+#reset-confirm-input { width: 100%; min-height: 44px; margin-bottom: var(--space-3); padding: 0 var(--space-2); }
+/* Admin user detail: a long email/name must wrap instead of widening the page at 320px. */
+.admin-view .profile-header > div { min-width: 0; }
+.admin-view .profile-header h2,
+.admin-view .profile-header p { overflow-wrap: anywhere; }

@@ -1,6 +1,6 @@
 import {
   collection, doc, query, where, orderBy, limit,
-  writeBatch, updateDoc, serverTimestamp, onSnapshot,
+  writeBatch, serverTimestamp, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
@@ -9,8 +9,13 @@ import { getProgram, getProgramDays } from './programService.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
 import { computeNextPosition } from '../utils/programProgress.js';
 import { classifyCompletionState, isEditableCompletedWorkout, EXPLICIT_SKIP_STATE, resolveCompletionState } from '../utils/workoutCompletion.js';
+import { checkActualOnlyCorrection } from '../utils/setLogging.js';
 import { orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { isOfflineUnavailableError } from '../utils/offlineError.js';
+// v22: every write below that changes training state is committed through
+// commitTrainingBatch — the admin-reset generation guard (stale devices can't
+// resurrect reset data). Same commit/promise semantics as before.
+import { commitTrainingBatch, assertTrainingStateWritable } from './trainingGenerationService.js';
 
 const workoutsCol = (uid) => collection(db, 'users', uid, 'workouts');
 const workoutDocRef = (uid, workoutId) => doc(workoutsCol(uid), workoutId);
@@ -156,9 +161,15 @@ export async function resolveActiveWorkout(uid, run) {
     // completion (the fallback query two lines down doesn't read
     // `activeWorkoutId` at all), so it never needed to be awaited for
     // control flow in the first place — fire it and move on immediately.
-    updateDoc(runDocRef(uid, run.id), { activeWorkoutId: null }).catch(() => {
-      /* best-effort cleanup, not required to succeed */
-    });
+    try {
+      const cleanup = writeBatch(db);
+      cleanup.update(runDocRef(uid, run.id), { activeWorkoutId: null });
+      commitTrainingBatch(uid, cleanup).catch(() => {
+        /* best-effort cleanup, not required to succeed */
+      });
+    } catch {
+      /* stale device (training data was reset) — nothing to clean up */
+    }
   }
 
   const found = await getInProgressWorkout(uid);
@@ -225,6 +236,7 @@ async function startOrResumeWorkout(uid, { program, day, run, week, dayOrder, cu
   const existing = await resolveActiveWorkout(uid, run);
   console.debug('[START] startOrResumeWorkout: resolveActiveWorkout returned', { existingId: existing?.id ?? null });
   if (existing) return existing;
+  assertTrainingStateWritable(uid); // before the local marker is written
 
   const newRef = doc(workoutsCol(uid));
   const workoutId = newRef.id;
@@ -274,7 +286,7 @@ async function startOrResumeWorkout(uid, { program, day, run, week, dayOrder, cu
     // Correction pass 9: invoked, never awaited — see this function's own
     // doc comment above for why this is now sufficient by itself, with
     // nothing further to wait for. Still logged on both settlement paths.
-    batch.commit().then(
+    commitTrainingBatch(uid, batch).then(
       () => console.debug('[START] startOrResumeWorkout: batch commit() backend-acknowledged', { workoutId }),
       (err) => console.error('[START] startOrResumeWorkout: batch commit() failed', { workoutId, err }),
     );
@@ -516,7 +528,11 @@ export async function countCompletedSince(uid, sinceDate) {
  * sync-status indicator reflects it honestly.
  */
 export async function updateWorkoutExercises(uid, workoutId, exercises) {
-  return trackWrite(() => updateDoc(workoutDocRef(uid, workoutId), { exercises }));
+  return trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.update(workoutDocRef(uid, workoutId), { exercises });
+    return commitTrainingBatch(uid, batch);
+  });
 }
 
 /**
@@ -808,7 +824,7 @@ async function finalizeInProgressWorkout(uid, workout, workoutPatchExtra) {
     // Correction pass 10: invoked, never awaited — see this function's own
     // doc comment above for why this is now sufficient by itself. Still
     // logged on both settlement paths.
-    batch.commit().then(
+    commitTrainingBatch(uid, batch).then(
       () => console.debug('[FINISH] finalizeInProgressWorkout: batch commit() backend-acknowledged', { workoutId: workout.id }),
       (err) => console.error('[FINISH] finalizeInProgressWorkout: batch commit() failed', { workoutId: workout.id, err }),
     );
@@ -944,12 +960,25 @@ export async function updateCompletedWorkoutLog(uid, workout, exercises) {
   if (!isEditableCompletedWorkout(workout)) {
     throw new Error('This workout is outside its edit window (or was explicitly skipped) and can no longer be corrected.');
   }
+  // v1.1: Firestore Rules pin every top-level identity/plan/timing field but
+  // cannot look inside the `exercises` array, so the "only actual logging
+  // data may be corrected" guarantee for set rows is enforced here: same
+  // exercises/sets, identical plan fields, only actual/logging fields
+  // (actualKg/actualReps/rpe/note/completed/completedAt/status) may differ.
+  const guard = checkActualOnlyCorrection(workout.exercises, exercises);
+  if (!guard.ok) {
+    throw new Error(`Only logged results can be corrected. ${guard.errors[0]}`);
+  }
   const completionState = classifyCompletionState(exercises);
-  return trackWrite(() => updateDoc(workoutDocRef(uid, workout.id), {
-    exercises,
-    completionState,
-    lastEditedAt: serverTimestamp(),
-  }));
+  return trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.update(workoutDocRef(uid, workout.id), {
+      exercises,
+      completionState,
+      lastEditedAt: serverTimestamp(),
+    });
+    return commitTrainingBatch(uid, batch);
+  });
 }
 
 /**
@@ -1030,7 +1059,11 @@ export async function reconcileLegacyProgramPosition(uid, run) {
     ...(next.programCompleted ? { programCompleted: true, programCompletedAt: serverTimestamp() } : {}),
   };
 
-  trackWrite(() => updateDoc(runDocRef(uid, run.id), patch)).catch((err) => {
+  trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.update(runDocRef(uid, run.id), patch);
+    return commitTrainingBatch(uid, batch);
+  }).catch((err) => {
     console.error('reconcileLegacyProgramPosition: write failed', err);
   });
   return { ...run, ...patch };

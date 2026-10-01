@@ -41,6 +41,7 @@ export function renderShell(accessRecord) {
       </button>
     </header>
     <main id="view-outlet" class="view-outlet" tabindex="-1"></main>
+    <footer class="app-footer">© ${APP_META.copyrightYear} ${APP_META.publisher} · ${APP_META.name}</footer>
     <nav class="bottom-nav" aria-label="Primary">
       ${navItems.map((item) => `
         <a href="#${item.route}" class="nav-item" data-route="${item.route}">

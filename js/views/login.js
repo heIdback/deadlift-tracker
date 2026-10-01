@@ -6,6 +6,7 @@ export async function mount(root) {
     <div class="login-screen">
       <div class="login-card">
         <h1 class="login-title">${APP_META.name}</h1>
+        <p class="login-byline">by ${APP_META.publisher}</p>
         <p class="login-subtitle">Your training dashboard and workout logger.</p>
         <button class="btn btn-primary btn-large" id="google-signin-btn">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

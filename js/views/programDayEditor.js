@@ -24,7 +24,7 @@ import {
 } from '../utils/programDisplay.js';
 import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 import {
-  totalWeeksOf, classifyEntryShape, createFlatEntry,
+  totalWeeksOf, classifyEntryShape, createFlatEntry, isWarmupRampLoad,
   validateFlatEntry, validateDayBeforeSave, validateRequiredName,
   moveEntry, removeEntryAt, appendEntry, uniqueId, LOAD_TYPES,
   getBlockDrivenWeekValues, applyBlockDrivenWeekEdit, validateBlockDrivenWeekPatch,
@@ -318,7 +318,9 @@ function entryEditorHtml(entry, index, section, totalWeeks, editWeek) {
         <label class="field" style="flex:1">Min reps<input type="number" min="1" step="1" id="${idPrefix}-repmin" value="${isRange ? reps.min : ''}"></label>
         <label class="field" style="flex:1">Max reps<input type="number" min="1" step="1" id="${idPrefix}-repmax" value="${isRange ? reps.max : ''}"></label>
       </div>
-      ${loadFieldsHtml(entry.load ?? { type: 'none' }, idPrefix)}
+      ${isWarmupRampLoad(entry.load)
+        ? `<p class="text-muted">Warm-up ramp: ${escapeHtml((entry.load.sets ?? []).map((st) => `${st.kg}×${st.reps}`).join(', '))} — kept exactly as imported (not editable here).</p>`
+        : loadFieldsHtml(entry.load ?? { type: 'none' }, idPrefix)}
       <div class="form-row">
         <label class="field" style="flex:1">RPE (optional)<input type="number" min="0" max="10" step="0.5" id="${idPrefix}-rpe" value="${entry.rpe ?? ''}"></label>
         <label class="field" style="flex:1">RIR (optional)<input type="number" min="0" max="10" step="1" id="${idPrefix}-rir" value="${entry.rir ?? ''}"></label>
@@ -425,7 +427,8 @@ function readEntryFromForm(container, entry, index, section, totalWeeks, editWee
     sets: Number(el('sets').value),
     reps,
     durationSec: entry.durationSec ?? null,
-    load: readLoadFromForm(container, idPrefix),
+    // v1.1: a warm-up ramp has no load controls — keep it exactly as stored.
+    load: isWarmupRampLoad(entry.load) ? entry.load : readLoadFromForm(container, idPrefix),
     notes: el('notes').value.trim() || null,
     rpe: el('rpe').value === '' ? null : Number(el('rpe').value),
     rir: el('rir').value === '' ? null : Number(el('rir').value),

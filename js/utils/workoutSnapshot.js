@@ -417,6 +417,11 @@ export function resolvePrescription(raw, { currentMaxes = {}, rounding = {} } = 
       sets: raw.sets,
       reps: raw.reps,
       durationSec: raw.durationSec,
+      // v1.1: the program's TARGET RPE (flat entries' `rpe`), carried into the
+      // immutable snapshot as prescription metadata only — distinct from a
+      // set row's own `rpe` (what was actually felt). Added only when the
+      // program has one, so every snapshot without a target is unchanged.
+      ...(typeof raw.rpe === 'number' && Number.isFinite(raw.rpe) ? { targetRpe: raw.rpe } : {}),
     },
     load: resolvedLoad,
     notes: raw.notes,

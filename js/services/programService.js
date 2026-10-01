@@ -1,12 +1,13 @@
 import {
   doc, setDoc, getDoc, getDocs, collection, query, where,
-  serverTimestamp, writeBatch, updateDoc, orderBy, limit, onSnapshot,
+  serverTimestamp, writeBatch, updateDoc, orderBy, limit, onSnapshot, runTransaction,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
 import { getDocSafe, getDocsSafe } from '../utils/firestoreRead.js';
 import { shouldInstallStarterProgram, pickStarterPosition } from '../utils/starterProgram.js';
 import { planDuplicateProgram, generateProgramId } from '../utils/programEditModel.js';
+import { commitTrainingBatch } from './trainingGenerationService.js';
 
 const programsCol = (uid) => collection(db, 'users', uid, 'programs');
 const daysCol = (uid, programId) => collection(db, 'users', uid, 'programs', programId, 'days');
@@ -147,13 +148,17 @@ export async function ensureStarterProgramForUser(uid) {
   const runRef = doc(runsCol(uid), STARTER_RUN_ID);
   const runSnap = await getDoc(runRef);
   if (!runSnap.exists()) {
-    await trackWrite(() => setDoc(runRef, {
-      programId,
-      startDate: serverTimestamp(),
-      current: position,
-      status: 'active',
-      overrides: {},
-    }));
+    await trackWrite(() => {
+      const batch = writeBatch(db);
+      batch.set(runRef, {
+        programId,
+        startDate: serverTimestamp(),
+        current: position,
+        status: 'active',
+        overrides: {},
+      });
+      return commitTrainingBatch(uid, batch); // v22: admin-reset generation guard
+    });
   }
   return { installed: true, programId, runId: STARTER_RUN_ID };
 }
@@ -303,7 +308,9 @@ export async function startProgramRun(uid, programId) {
     console.debug('[START] startProgramRun: invoking setDoc()', { uid, runId: ref.id, programId });
     // Correction pass 9: invoked, never awaited — see this function's doc
     // comment above. Nothing below depends on Firestore reading this back.
-    setDoc(ref, runData).then(
+    const batch = writeBatch(db);
+    batch.set(ref, runData);
+    commitTrainingBatch(uid, batch).then( // v22: admin-reset generation guard
       () => console.debug('[START] startProgramRun: setDoc() backend-acknowledged', { runId: ref.id }),
       (err) => console.error('[START] startProgramRun: setDoc() failed', { runId: ref.id, err }),
     );
@@ -350,7 +357,11 @@ function waitForLocalDocToExist(ref) {
 
 /** Manual navigation controls, per the "skip / repeat / move / advance / go back" requirement. */
 export async function advanceProgramRun(uid, runId, { week, dayOrder }) {
-  await trackWrite(() => updateDoc(doc(runsCol(uid), runId), { current: { week, dayOrder } }));
+  await trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.update(doc(runsCol(uid), runId), { current: { week, dayOrder } });
+    return commitTrainingBatch(uid, batch); // v22: admin-reset generation guard
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -406,4 +417,62 @@ export async function duplicateProgram(uid, programId, newName) {
     await batch.commit();
     return plan.programId;
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// v1.1 — Program Import (JSON/CSV). The plan comes from
+// js/utils/programImport.js's validateProgramDefinition (already
+// validated, sanitized and whitelisted there); this is the one write.
+//
+// Guarantees, by construction:
+//   - NEVER overwrites: a transaction re-reads `programs/{id}` and aborts
+//     with ProgramIdConflictError if it exists — even if another tab/device
+//     created that id after the preview was shown.
+//   - All-or-nothing: the program doc and every day doc are written in the
+//     same transaction, so a failure leaves nothing partially imported.
+//   - Only ever touches `users/{uid}/programs/{newId}` and its `days` — the
+//     uid is the signed-in caller's (never anything from the file), and
+//     programRuns/workouts/maxes/measurements/profile are never read or
+//     written. Setting the new program active is a separate, explicit
+//     user action (Program → Set Active).
+//   - Needs a connection: Firestore transactions don't run offline, so an
+//     offline attempt fails cleanly with nothing written.
+// ─────────────────────────────────────────────────────────────────────────
+
+export class ProgramIdConflictError extends Error {
+  constructor(programId) {
+    super(`A program with id "${programId}" already exists. Nothing was imported.`);
+    this.name = 'ProgramIdConflictError';
+    this.programId = programId;
+  }
+}
+
+/** Program-doc fields an import may write (defense in depth on top of the validator's own whitelist). */
+const IMPORTED_PROGRAM_FIELDS = ['schemaVersion', 'name', 'version', 'sourceFile', 'roundingRules', 'weeks', 'exerciseLibrary', 'importReviewFlags', 'importSource', 'notes', 'decisionRules', 'generatedBy', 'currentOneRepMaxesAtImport'];
+
+export async function importProgram(uid, plan) {
+  if (!uid) throw new Error('Not signed in.');
+  if (!plan || typeof plan.programId !== 'string' || !Array.isArray(plan.days) || plan.days.length === 0) {
+    throw new Error('Nothing to import.');
+  }
+  const programData = {};
+  for (const f of IMPORTED_PROGRAM_FIELDS) {
+    if (plan.program?.[f] !== undefined) programData[f] = plan.program[f];
+  }
+  const programRef = doc(programsCol(uid), plan.programId);
+
+  return trackWrite(() => runTransaction(db, async (tx) => {
+    const existing = await tx.get(programRef);
+    if (existing.exists()) throw new ProgramIdConflictError(plan.programId);
+    tx.set(programRef, {
+      ...programData,
+      importedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    for (const day of plan.days) {
+      tx.set(doc(daysCol(uid, plan.programId), day.id), day.data);
+    }
+    return plan.programId;
+  }));
 }

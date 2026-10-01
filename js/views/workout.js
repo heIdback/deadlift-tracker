@@ -12,6 +12,8 @@ import {
 } from '../services/workoutService.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
 import { countLoggableSets } from '../utils/workoutCompletion.js';
+import { setBlockHtml, wireSetBlock } from '../components/setResult.js';
+import { resolveSetStatus, SET_STATUS } from '../utils/setLogging.js';
 import { orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { escapeHtml } from '../utils/dom.js';
 
@@ -76,11 +78,18 @@ function repsPlaceholder(ex) {
   return '—';
 }
 
+/** v1.1: "Target RPE 6" line for a snapshot that carries one (prescription only — never an actual RPE). */
+function targetRpeHtml(ex) {
+  const t = ex.prescribed?.targetRpe;
+  return typeof t === 'number' ? `<div class="card-sub target-rpe">Target RPE ${escapeHtml(t)}</div>` : '';
+}
+
 function renderExercisePreview(ex) {
   return `
     <div class="card">
       <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
       <div class="card-sub">${ex.prescribed.sets ?? '—'} × ${escapeHtml(formatReps(ex.prescribed.reps, ex.prescribed.durationSec))} @ ${escapeHtml(formatLoad(ex.load))}</div>
+      ${targetRpeHtml(ex)}
       ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
     </div>`;
 }
@@ -225,29 +234,21 @@ function backfillSets(exercises) {
   return { exercises: next, changed };
 }
 
+/**
+ * v1.1: each set is now a "set block" (js/components/setResult.js) — the
+ * same [index | kg | reps | ✓] row as before, plus a small ⋯ button that
+ * opens Failed / Skip set / RPE / note for that set, and a one-line status
+ * summary ("⚠ Failed · Planned 160 × 5"). Actual weight/reps are still
+ * prefilled to the plan, so the normal flow is unchanged: tap ✓. Changing
+ * the weight or reps of a done set marks it Modified automatically.
+ */
 function renderSetRow(ex, s) {
-  const hasKgField = ex.load?.type !== 'bodyweight';
-  const hasRepsField = s.durationSec == null;
-  const label = s.kind === 'warmup' ? `W${s.setNumber}` : String(s.setNumber);
-
-  const kgField = hasKgField
-    ? `<input class="set-input set-kg" type="number" inputmode="decimal" step="0.5"
-        value="${s.actualKg ?? ''}" placeholder="${s.plannedKg ?? '—'}" aria-label="Weight in kg">`
-    : `<span class="set-input set-kg set-input-disabled">BW</span>`;
-
-  const repsField = hasRepsField
-    ? `<input class="set-input set-reps" type="number" inputmode="numeric" step="1" min="0"
-        value="${s.actualReps ?? ''}" placeholder="${escapeHtml(String(s.plannedReps ?? repsPlaceholder(ex)))}" aria-label="Reps">`
-    : `<span class="set-input set-reps set-input-disabled">${s.durationSec}s</span>`;
-
-  return `
-    <div class="set-row${s.completed ? ' is-complete' : ''}" data-set-id="${escapeHtml(s.setId)}">
-      <span class="set-index">${escapeHtml(label)}</span>
-      ${kgField}
-      ${repsField}
-      <button type="button" class="set-check${s.completed ? ' is-complete' : ''}"
-        aria-pressed="${s.completed}" aria-label="Mark set ${escapeHtml(label)} complete">${s.completed ? '✓' : ''}</button>
-    </div>`;
+  return setBlockHtml(s, {
+    showKg: ex.load?.type !== 'bodyweight',
+    showReps: s.durationSec == null,
+    repsPlaceholder: repsPlaceholder(ex),
+    dataAttrs: `data-set-id="${escapeHtml(s.setId)}"`,
+  });
 }
 
 /**
@@ -270,6 +271,7 @@ function renderExerciseBlock(ex) {
   return `
     <div class="card exercise-card">
       <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
+      ${targetRpeHtml(ex)}
       ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
       ${rows ? `<div class="set-table">${rows}</div>` : '<p class="text-muted">Nothing to log for this item.</p>'}
     </div>`;
@@ -281,7 +283,7 @@ function renderWorkoutHtml(workout) {
       <div class="card card-primary">
         <div class="card-label">In Progress — Week ${workout.week}</div>
         <h2 class="card-title">${escapeHtml(workout.dayName)}</h2>
-        <div class="card-sub">Tap ✓ once you've done a set. Everything saves automatically — you can close this and come back.</div>
+        <div class="card-sub">Tap ✓ once you've done a set. Change the weight or reps if you did something different, or tap ⋯ to mark a set failed or skipped. Everything saves automatically.</div>
       </div>
       ${workout.exercises.map(renderExerciseBlock).join('')}
       <div class="card" id="finish-panel">
@@ -511,37 +513,12 @@ function mountActiveWorkout(root, uid, workoutInput) {
   }
 
   function wireEvents() {
-    root.querySelectorAll('.set-row').forEach((rowEl) => {
-      const setId = rowEl.dataset.setId;
-      const set = findSet(setId);
+    root.querySelectorAll('.set-block[data-set-id]').forEach((blockEl) => {
+      const set = findSet(blockEl.dataset.setId);
       if (!set) return;
-
-      const kgInput = rowEl.querySelector('.set-kg:not(.set-input-disabled)');
-      kgInput?.addEventListener('input', () => {
-        const v = kgInput.value;
-        set.actualKg = v === '' ? null : Number(v);
-        queueSave(false);
-      });
-
-      const repsInput = rowEl.querySelector('.set-reps:not(.set-input-disabled)');
-      repsInput?.addEventListener('input', () => {
-        const v = repsInput.value;
-        set.actualReps = v === '' ? null : Number(v);
-        queueSave(false);
-      });
-
-      const checkBtn = rowEl.querySelector('.set-check');
-      checkBtn?.addEventListener('click', () => {
-        set.completed = !set.completed;
-        set.completedAt = set.completed ? Date.now() : null;
-        rowEl.classList.toggle('is-complete', set.completed);
-        checkBtn.classList.toggle('is-complete', set.completed);
-        checkBtn.setAttribute('aria-pressed', String(set.completed));
-        checkBtn.textContent = set.completed ? '✓' : '';
-        // Completion toggles get prompt persistence, not the text-field
-        // debounce — there's no more typing coming for this action.
-        queueSave(true);
-      });
+      // Typing gets the debounced save; taps (✓ / Failed / Skip) get prompt
+      // persistence — same cadence split as before v1.1.
+      wireSetBlock(blockEl, set, (kind) => queueSave(kind === 'action'));
     });
 
     root.querySelector('#finish-btn')?.addEventListener('click', onFinish);
@@ -571,9 +548,12 @@ function mountActiveWorkout(root, uid, workoutInput) {
     }
 
     const isZero = completed === 0;
+    const skipped = workout.exercises.flatMap((ex) => ex.sets ?? [])
+      .filter((st) => resolveSetStatus(st) === SET_STATUS.SKIPPED).length;
+    const skippedNote = skipped ? ` (${skipped} skipped)` : '';
     const message = isZero
-      ? 'No sets are marked as completed. Finish anyway? It will be marked as Not Logged.'
-      : `This workout has ${completed} of ${total} sets completed. Finish anyway? It will be marked as Partial.`;
+      ? `No sets are marked as completed${skippedNote}. Finish anyway? It will be marked as Not Logged.`
+      : `This workout has ${completed} of ${total} sets completed${skippedNote}. Finish anyway? It will be marked as Partial.`;
     console.debug('[FINISH] workout.js onFinish: confirmation required', { workoutId: workout.id, isZero, message });
 
     panel.innerHTML = `

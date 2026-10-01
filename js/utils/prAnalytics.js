@@ -147,6 +147,17 @@ function bestByEstimate(sets) {
  * Squat etc. can never be accidentally combined even though their names
  * share words.
  */
+/**
+ * v1.1: a Tested 1RM is a SUCCESSFUL single. Failed sets are already
+ * excluded from every analytic by progressAnalytics.js's
+ * isMeaningfulWorkingSet (which feeds workingSetsFor below); this repeats
+ * the rule at the one place that can offer "use as Current 1RM", so a
+ * failed attempt can never become a stored 1RM even if that filter changes.
+ */
+function isSuccessfulSingle(s) {
+  return s.actualReps === 1 && s.status !== 'failed';
+}
+
 export function computeExercisePrEvents(completedWorkouts, exerciseId) {
   const runningBest = new Map(); // categoryKey -> highest value seen so far
   const events = [];
@@ -165,7 +176,7 @@ export function computeExercisePrEvents(completedWorkouts, exerciseId) {
 
     const candidates = [
       { type: PR_TYPE.WEIGHT, repCount: null, result: bestByWeight(sets) },
-      { type: PR_TYPE.TESTED_1RM, repCount: null, result: bestByWeight(sets, (s) => s.actualReps === 1) },
+      { type: PR_TYPE.TESTED_1RM, repCount: null, result: bestByWeight(sets, isSuccessfulSingle) },
       { type: PR_TYPE.ESTIMATED_1RM, repCount: null, result: bestByEstimate(sets) },
       ...repCounts.map((repCount) => ({
         type: PR_TYPE.REP,
@@ -314,7 +325,7 @@ export function bestTestedOneRepMax(completedWorkouts, exerciseId) {
   let best = null;
   for (const workout of chronological(completedWorkouts)) {
     for (const s of workingSetsFor(workout, exerciseId)) {
-      if (s.actualReps === 1 && (best == null || s.actualKg > best)) best = s.actualKg;
+      if (isSuccessfulSingle(s) && (best == null || s.actualKg > best)) best = s.actualKg;
     }
   }
   return best;

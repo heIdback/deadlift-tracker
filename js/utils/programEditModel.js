@@ -33,6 +33,18 @@
 
 export const LOAD_TYPES = ['none', 'bodyweight', 'fixed', 'percent', 'percentRange'];
 
+/**
+ * v1.1: an explicit warm-up ramp on a FLAT entry — `load: {type:'sets',
+ * sets:[{kg, reps}, …]}` (e.g. the Deadlift 210 program's weekly
+ * "Deadlift — Warm-up" rows). The workout generator already supports it
+ * (workoutSnapshot.js resolvePrescription → static ramp). It is not one of
+ * the editor's selectable LOAD_TYPES: the Day editor shows it read-only and
+ * always keeps it exactly as stored, never converting it to another type.
+ */
+export function isWarmupRampLoad(load) {
+  return load?.type === 'sets';
+}
+
 /** How many weeks a program's own `weeks` metadata actually defines — never a hardcoded 8. */
 export function totalWeeksOf(program) {
   const weeks = program?.weeks ?? [];
@@ -135,7 +147,14 @@ export function validateFlatEntry(entry, { totalWeeks = 8, knownBasisIds = null 
   }
 
   const load = entry.load ?? { type: 'none' };
-  if (!LOAD_TYPES.includes(load.type)) {
+  if (isWarmupRampLoad(load)) {
+    const steps = load.sets;
+    if (!Array.isArray(steps) || steps.length === 0 || steps.length > 15) {
+      errors.push('A warm-up ramp needs 1 to 15 steps.');
+    } else if (steps.some((st) => !(st && typeof st.kg === 'number' && st.kg >= 0 && st.kg <= 500 && isPositiveInt(st.reps) && st.reps <= 50))) {
+      errors.push('Each warm-up step needs a weight between 0 and 500 kg and 1–50 reps.');
+    }
+  } else if (!LOAD_TYPES.includes(load.type)) {
     errors.push('Unknown load type.');
   } else if (load.type === 'fixed') {
     if (!(typeof load.kg === 'number' && load.kg >= 0 && load.kg <= 500)) {
@@ -408,6 +427,12 @@ export function planDuplicateProgram({ sourceProgram, sourceDays, newProgramId, 
     // list described issues with the ORIGINAL spreadsheet import, not
     // anything about this new copy.
     importReviewFlags: [],
+    // v1.1: an imported program's version label, notes and decision rules
+    // are part of the program itself, so a copy keeps them (only when set).
+    ...(sourceProgram.version ? { version: sourceProgram.version } : {}),
+    ...(sourceProgram.notes ? { notes: sourceProgram.notes } : {}),
+    ...(Array.isArray(sourceProgram.decisionRules) && sourceProgram.decisionRules.length
+      ? { decisionRules: [...sourceProgram.decisionRules] } : {}),
   };
 
   const days = (sourceDays ?? []).map((d) => {

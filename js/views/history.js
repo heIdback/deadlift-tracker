@@ -64,6 +64,10 @@ import {
 } from '../utils/dates.js';
 import { computeWarmupFirstOrder, orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { escapeHtml } from '../utils/dom.js';
+import {
+  SET_STATUS, resolveSetStatus, setStatusLabel, plannedDifferenceText, formatWeightReps,
+} from '../utils/setLogging.js';
+import { setBlockHtml, wireSetBlock, statusClasses } from '../components/setResult.js';
 import { basisLabel } from '../utils/programDisplay.js';
 // Phase 5B, Package 1 — PR (Personal Record) detection. Purely additive,
 // read-only: computeAllPrEvents derives everything from the SAME completed-
@@ -86,11 +90,6 @@ const HISTORY_LIST_LIMIT = 200;
 
 function backToHistoryLink() {
   return `<a href="#/history" class="text-muted">&larr; Back to History</a>`;
-}
-
-/** Phase 4 grammar fix: "1 rep" (singular), "2 reps"/"5 reps" (plural) — was previously always "reps" regardless of count. Applied generically wherever a rep count is rendered in this file's set-row formatter (the only place History displays one). */
-function formatRepsCount(n) {
-  return `${n} rep${n === 1 ? '' : 's'}`;
 }
 
 /**
@@ -253,19 +252,40 @@ function timingLineHtml(workout, { compact }) {
     : date;
 }
 
-/** Read-only rendering of one logged set row — field names match workoutSnapshot.js's makeSetRow exactly (setNumber/kind/plannedKg/actualKg/plannedReps/actualReps/rpe/note/completed). */
+/**
+ * Read-only rendering of one logged set row — field names match
+ * workoutSnapshot.js's makeSetRow exactly (setNumber/kind/plannedKg/
+ * actualKg/plannedReps/actualReps/rpe/note/completed), plus v1.1's optional
+ * `status` (js/utils/setLogging.js). Compact set-by-set display of what was
+ * ACTUALLY done, with the plan shown only when it differs:
+ *   1   160 × 5   ✓
+ *   3   155 × 4   ⚠ Failed      Planned 160 × 5 · note
+ *   4   150 × 5   ⚠ Modified    Planned 160 × 5
+ *   5             ⏭ Skipped
+ * Pre-v1.1 sets (no `status`) resolve through resolveSetStatus, so old
+ * workouts render exactly as logged. Planned values are only ever READ.
+ */
 function renderReadOnlySetRow(s) {
   const label = s.kind === 'warmup' ? `W${s.setNumber}` : String(s.setNumber);
-  const kg = s.actualKg != null ? `${s.actualKg} kg` : (s.durationSec != null ? `${s.durationSec}s` : '—');
-  const reps = s.actualReps != null ? formatRepsCount(s.actualReps) : '';
+  const status = resolveSetStatus(s);
+  const actual = status === SET_STATUS.SKIPPED
+    ? ''
+    : (formatWeightReps(s.actualKg, s.actualReps, { durationSec: s.durationSec }) || '—');
+  const { icon, text } = setStatusLabel(status);
+  const statusHtml = status === SET_STATUS.COMPLETED
+    ? '✓'
+    : (status ? `<span class="set-status-text">${escapeHtml(icon)} ${escapeHtml(text)}</span>` : '—');
+  const extras = [
+    plannedDifferenceText(s),
+    typeof s.rpe === 'number' ? `RPE ${s.rpe}` : '',
+    s.note ? s.note : '',
+  ].filter(Boolean).join(' · ');
   return `
-    <div class="admin-readonly-set${s.completed ? ' is-complete' : ''}">
+    <div class="history-set ${status ? statusClasses(status).join(' ') : 'is-not-logged'}">
       <span class="set-index">${escapeHtml(label)}</span>
-      <span>${escapeHtml(kg)}</span>
-      <span>${escapeHtml(reps)}</span>
-      <span>${s.completed ? '✓' : '—'}</span>
-      ${s.rpe != null ? `<span class="text-muted">RPE ${escapeHtml(s.rpe)}</span>` : ''}
-      ${s.note ? `<span class="text-muted">${escapeHtml(s.note)}</span>` : ''}
+      <span class="history-set-actual">${escapeHtml(actual)}</span>
+      <span class="history-set-status">${statusHtml}</span>
+      ${extras ? `<span class="history-set-extra text-muted">${escapeHtml(extras)}</span>` : ''}
     </div>`;
 }
 
@@ -315,8 +335,9 @@ function renderWorkoutDetail(root, uid, workout, completedForPr = null) {
         ${orderExercisesWarmupFirst(workout.exercises ?? []).map((ex) => `
           <div class="card">
             <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
+            ${typeof ex.prescribed?.targetRpe === 'number' ? `<div class="card-sub target-rpe">Target RPE ${escapeHtml(ex.prescribed.targetRpe)}</div>` : ''}
             ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
-            <div class="admin-readonly-set-table">
+            <div class="history-set-table">
               ${(ex.sets ?? []).map(renderReadOnlySetRow).join('') || '<p class="text-muted">Nothing logged.</p>'}
             </div>
           </div>`).join('')}
@@ -326,20 +347,20 @@ function renderWorkoutDetail(root, uid, workout, completedForPr = null) {
   root.querySelector('#edit-workout-btn')?.addEventListener('click', () => renderEditMode(root, uid, workout, completedForPr));
 }
 
-/** Editable version of one set row — same visual language as js/views/workout.js's active-logger renderSetRow (index/kg/reps/check), plus RPE/note inputs the live logger doesn't yet expose but the schema already supports (Phase 4.1 Goal C explicitly asks for both). Never renders/edits plannedKg/plannedReps — only the actual/logging fields. */
-function editableSetRowHtml(s, exIndex, setIndex) {
-  const label = s.kind === 'warmup' ? `W${s.setNumber}` : String(s.setNumber);
-  return `
-    <div class="set-row${s.completed ? ' is-complete' : ''}" data-ex="${exIndex}" data-set="${setIndex}">
-      <span class="set-index">${escapeHtml(label)}</span>
-      <input class="set-input set-kg" type="number" inputmode="decimal" step="0.5" value="${s.actualKg ?? ''}" aria-label="Weight in kg">
-      <input class="set-input set-reps" type="number" inputmode="numeric" step="1" min="0" value="${s.actualReps ?? ''}" aria-label="Reps">
-      <button type="button" class="set-check${s.completed ? ' is-complete' : ''}" aria-pressed="${s.completed}" aria-label="Mark set ${escapeHtml(label)} complete">${s.completed ? '✓' : ''}</button>
-    </div>
-    <div class="set-row-extra" data-ex="${exIndex}" data-set="${setIndex}">
-      <input class="set-input set-rpe" type="number" inputmode="decimal" step="0.5" min="0" max="10" placeholder="RPE" value="${s.rpe ?? ''}" aria-label="RPE">
-      <input class="set-input set-note" type="text" maxlength="200" placeholder="Note" value="${escapeHtml(s.note ?? '')}" aria-label="Note">
-    </div>`;
+/**
+ * Editable version of one set row (the existing completed-workout
+ * correction mode). v1.1: the very same set block the live logger uses
+ * (js/components/setResult.js) — actual weight/reps, ✓, and ⋯ for
+ * Failed / Skip set / RPE / note. Never renders or edits plannedKg/
+ * plannedReps; workoutService.updateCompletedWorkoutLog additionally
+ * rejects any change outside the actual/logging fields.
+ */
+function editableSetRowHtml(ex, s, exIndex, setIndex) {
+  return setBlockHtml(s, {
+    showKg: ex.load?.type !== 'bodyweight',
+    showReps: s.durationSec == null,
+    dataAttrs: `data-ex="${exIndex}" data-set="${setIndex}"`,
+  });
 }
 
 /**
@@ -392,7 +413,7 @@ function renderEditMode(root, uid, workout, completedForPr = null) {
           <div class="card exercise-card">
             <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
             <div class="set-table">
-              ${(ex.sets ?? []).map((s, setIndex) => editableSetRowHtml(s, exIndex, setIndex)).join('') || '<p class="text-muted">Nothing to edit for this item.</p>'}
+              ${(ex.sets ?? []).map((s, setIndex) => editableSetRowHtml(ex, s, exIndex, setIndex)).join('') || '<p class="text-muted">Nothing to edit for this item.</p>'}
             </div>
           </div>`;
         }).join('')}
@@ -410,39 +431,9 @@ function renderEditMode(root, uid, workout, completedForPr = null) {
     return working[exIndex]?.sets?.[setIndex] ?? null;
   }
 
-  root.querySelectorAll('.set-row[data-ex]').forEach((rowEl) => {
-    const exIndex = Number(rowEl.dataset.ex);
-    const setIndex = Number(rowEl.dataset.set);
-    const s = findWorkingSet(exIndex, setIndex);
-    if (!s) return;
-
-    rowEl.querySelector('.set-kg').addEventListener('input', (e) => {
-      s.actualKg = e.target.value === '' ? null : Number(e.target.value);
-    });
-    rowEl.querySelector('.set-reps').addEventListener('input', (e) => {
-      s.actualReps = e.target.value === '' ? null : Number(e.target.value);
-    });
-    const checkBtn = rowEl.querySelector('.set-check');
-    checkBtn.addEventListener('click', () => {
-      s.completed = !s.completed;
-      rowEl.classList.toggle('is-complete', s.completed);
-      checkBtn.classList.toggle('is-complete', s.completed);
-      checkBtn.setAttribute('aria-pressed', String(s.completed));
-      checkBtn.textContent = s.completed ? '✓' : '';
-    });
-  });
-  root.querySelectorAll('.set-row-extra[data-ex]').forEach((rowEl) => {
-    const exIndex = Number(rowEl.dataset.ex);
-    const setIndex = Number(rowEl.dataset.set);
-    const s = findWorkingSet(exIndex, setIndex);
-    if (!s) return;
-
-    rowEl.querySelector('.set-rpe').addEventListener('input', (e) => {
-      s.rpe = e.target.value === '' ? null : Number(e.target.value);
-    });
-    rowEl.querySelector('.set-note').addEventListener('input', (e) => {
-      s.note = e.target.value;
-    });
+  root.querySelectorAll('.set-block[data-ex]').forEach((blockEl) => {
+    const s = findWorkingSet(Number(blockEl.dataset.ex), Number(blockEl.dataset.set));
+    if (s) wireSetBlock(blockEl, s);
   });
 
   root.querySelector('#cancel-edit-btn').addEventListener('click', () => {

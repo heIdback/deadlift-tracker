@@ -355,7 +355,36 @@
 //     00:00 local time through now, instead of a rolling 7 days.
 // Without the bump an installed v20 browser would keep serving the old
 // modules, since cache-first never re-checks the network for a hit.
-const CACHE_VERSION = 'v21';
+//
+// v23 — same app (1.1.0), cache bump only: several v22 builds were handed
+// out under the same cache name; a browser that installed an earlier v22
+// would otherwise keep serving its old modules (cache-first). Forces every
+// device onto the current Program Import + Admin Reset + stale-device guard.
+//
+// v22 — app version 1.1.0 (config/app.config.js APP_META.version):
+//   - Program Import (JSON + CSV): new js/utils/programImport.js (pure
+//     parse/validate) and js/views/programImport.js (Program → Import
+//     Program), plus programService.importProgram (one all-or-nothing
+//     transaction that never overwrites an existing program id).
+//   - Actual-set logging: new js/utils/setLogging.js (per-set status
+//     completed/modified/failed/skipped, additive `status` field) and
+//     js/components/setResult.js (shared set UI for the live logger and
+//     History's existing edit mode).
+//   - heldback branding (APP_META publisher; login byline, footer, Profile).
+//   - Program Import accepts flat warm-up ramps ({type:'sets'}); the Day
+//     editor keeps them read-only and intact.
+//   - Admin "Reset training data": js/views/adminReset.js +
+//     js/services/adminResetService.js (lazy-loaded from Admin → user). The
+//     reset runs server-side (Cloud Function `adminResetUserFitness`); its
+//     Functions SDK + network call are never cached (not in the lists below).
+//   - Stale-device guard after an admin reset: js/services/trainingGenerationService.js
+//     + js/utils/trainingGeneration.js (static imports of the app's write services).
+//   - '#/import' (dead route) now redirects to Program Import; Home shows
+//     "Week N / <program's own week count>" instead of a hard-coded 8.
+//   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
+//     exportService.js re-export) and is now listed below; the old comment
+//     calling it dead code was wrong, so Profile could fail to load offline.
+const CACHE_VERSION = 'v23';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -363,19 +392,18 @@ const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 // every route in config/app.config.js's ROUTES table (including the 404
 // view), transitively, per a real graph-walking audit re-run against the
 // exact current source tree (not hand-maintained/guessed) — see this
-// phase's final report for the audit method and its full output. The one
-// local .js file NOT in this list (js/utils/exportFlatten.js) is genuinely
-// unreferenced dead code, confirmed by that same audit, not an oversight.
+// phase's final report for the audit method and its full output. (v22:
+// re-audited; every reachable local module is listed, including
+// js/utils/exportFlatten.js, which an earlier audit had missed.)
 //
-// NOTE: config/app.config.js's ROUTES table also maps '/import' to
-// js/views/import.js, which does not exist in this codebase (a pre-existing
-// gap unrelated to this phase — see the final report). It is correctly
-// absent from this list; nothing in normal navigation reaches it (it is not
-// in NAV_ITEMS), and this was true before this phase and is unchanged by it.
+// NOTE (v22): config/app.config.js's ROUTES table used to map '/import' to
+// a js/views/import.js that never existed. It now maps to js/views/program.js,
+// which redirects '#/import' to '#/program?import=1' (Program Import).
 const SHELL_MODULES = [
   'config/app.config.js',
   'js/app.js',
   'js/components/navigation.js',
+  'js/components/setResult.js',
   'js/core/access.js',
   'js/core/auth.js',
   'js/core/firebase.js',
@@ -384,12 +412,14 @@ const SHELL_MODULES = [
   'js/core/sync-status.js',
   'js/services/accessAdminService.js',
   'js/services/adminInsightsService.js',
+  'js/services/adminResetService.js',
   'js/services/exportService.js',
   'js/services/measurementService.js',
   'js/services/programEditService.js',
   'js/services/programService.js',
   'js/services/programSwitchService.js',
   'js/services/restoreService.js',
+  'js/services/trainingGenerationService.js',
   'js/services/userService.js',
   'js/services/workoutService.js',
   'js/utils/adminStats.js',
@@ -399,23 +429,28 @@ const SHELL_MODULES = [
   'js/utils/dom.js',
   'js/utils/download.js',
   'js/utils/exerciseOrdering.js',
+  'js/utils/exportFlatten.js',
   'js/utils/exportSerialize.js',
   'js/utils/firestoreRead.js',
   'js/utils/maxHistoryAnalytics.js',
   'js/utils/offlineError.js',
   'js/utils/programDisplay.js',
   'js/utils/programEditModel.js',
+  'js/utils/programImport.js',
   'js/utils/programProgress.js',
   'js/utils/programSwitch.js',
   'js/utils/prAnalytics.js',
   'js/utils/progressAnalytics.js',
   'js/utils/requiredLifts.js',
   'js/utils/restorePlan.js',
+  'js/utils/setLogging.js',
   'js/utils/starterProgram.js',
+  'js/utils/trainingGeneration.js',
   'js/utils/validation.js',
   'js/utils/workoutCompletion.js',
   'js/utils/workoutSnapshot.js',
   'js/views/admin.js',
+  'js/views/adminReset.js',
   'js/views/adminUserDetail.js',
   'js/views/disabled.js',
   'js/views/history.js',
@@ -428,6 +463,7 @@ const SHELL_MODULES = [
   'js/views/profile.js',
   'js/views/program.js',
   'js/views/programDayEditor.js',
+  'js/views/programImport.js',
   'js/views/progress.js',
   'js/views/workout.js',
 ];

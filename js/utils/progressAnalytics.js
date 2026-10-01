@@ -27,6 +27,7 @@
 import { epleyEstimate1RM, calculateVolume } from './calculations.js';
 import { basisLabel } from './programDisplay.js';
 import { resolveCompletionState, EXPLICIT_SKIP_STATE } from './workoutCompletion.js';
+import { isAnalyticsEligibleSet } from './setLogging.js';
 
 /**
  * Estimated-1RM safety rule (spec: "if no existing rule exists, use a
@@ -139,6 +140,14 @@ export function chronological(completedWorkouts) {
 export function isMeaningfulWorkingSet(s) {
   return !!s
     && s.completed === true
+    // v1.1 (js/utils/setLogging.js): only COMPLETED and MODIFIED sets feed
+    // performance analytics (top weight, volume, e1RM, every PR category),
+    // always using their ACTUAL weight/reps — never the planned values.
+    // A FAILED set is kept in the workout/History as a training record but
+    // never produces a performance or e1RM point, even with actual values
+    // entered. A SKIPPED set (stored completed:false anyway) never does
+    // either. Pre-v1.1 sets have no status and stay eligible, as before.
+    && isAnalyticsEligibleSet(s)
     && s.kind !== 'warmup'
     && typeof s.actualKg === 'number' && s.actualKg > 0
     && typeof s.actualReps === 'number' && s.actualReps > 0;

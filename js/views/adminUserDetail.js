@@ -139,6 +139,7 @@ function renderUserDetail(root, targetUid, access, detail) {
             <div class="text-muted">${formatDate(w.finishedAt)}</div>
           </div>`).join('') : '<p class="text-muted">No completed workouts yet.</p>'}
       </div>
+      <div id="admin-reset-slot"></div>
     </section>`;
   wireAvatarFallbacks(root);
 }
@@ -170,4 +171,19 @@ export async function mount(root, { targetUid }) {
   }
 
   renderUserDetail(root, targetUid, access, detail);
+
+  // v1.1: permanent "Reset training data" (admin-only screen; the server
+  // re-verifies admin status). Loaded on demand so this read-only screen's
+  // own module graph is unchanged.
+  const slot = root.querySelector('#admin-reset-slot');
+  if (slot) {
+    try {
+      const { mountResetPanel } = await import('./adminReset.js');
+      mountResetPanel(slot, { targetUid, access, onReload: () => mount(root, { targetUid }) });
+    } catch (err) {
+      // Never break the read-only detail (e.g. offline before the module is cached).
+      console.warn('adminUserDetail: reset panel unavailable', err);
+      slot.innerHTML = '<p class="text-muted">Reset training data is unavailable right now (needs a connection).</p>';
+    }
+  }
 }

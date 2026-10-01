@@ -4,10 +4,24 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 export const APP_META = {
-  name: 'Deadlift Tracker', // temporary working name, change here only
-  version: '0.2.0',
+  name: 'Deadlift Tracker', // change here only
+  // v1.1: the maker/brand, shown quietly (login byline, footer, Profile
+  // "About") — never repeated as a hardcoded string anywhere else.
+  publisher: 'heldback',
+  copyrightYear: 2026,
+  // 1.1.0: first feature release after the v1 production build (Program
+  // Import, actual-set logging, heldback branding). Tracks the app, not the
+  // service-worker cache name (sw.js CACHE_VERSION).
+  version: '1.1.0',
+  // Unchanged on purpose: v1.1's new data (set `status`, program `version`/
+  // `importSource`/`importedAt`/`notes`/`decisionRules`) is purely additive
+  // and optional — every
+  // existing document still reads correctly without migration.
   schemaVersion: 1,
 };
+
+/** "Deadlift Tracker · heldback" — browser tab title. */
+export const APP_TITLE = `${APP_META.name} · ${APP_META.publisher}`;
 
 // Replace with your Firebase project's web config (Firebase Console →
 // Project Settings → General → Your apps → SDK setup and configuration).
@@ -46,7 +60,9 @@ export const ROUTES = {
   '/progress': 'progress',
   '/profile': 'profile',
   '/nutrition': 'nutrition',
-  '/import': 'import',
+  // v1.1: the old placeholder route (its view file never existed) now opens
+  // Program → Import Program — js/views/program.js redirects it there.
+  '/import': 'program',
   '/admin': 'admin',
   '/program': 'program', // Phase 4: Program Management & Program Editor
 };

@@ -16,7 +16,39 @@ import { escapeHtml } from '../utils/dom.js';
 
 function parseParams() {
   const params = new URLSearchParams(location.hash.split('?')[1] ?? '');
-  return { programId: params.get('id') || null, dayId: params.get('day') || null };
+  return {
+    programId: params.get('id') || null,
+    dayId: params.get('day') || null,
+    importMode: params.get('import') === '1',
+  };
+}
+
+// v1.1: small "v2 · imported" line for a program that carries the
+// additive `version`/`importSource` fields (js/services/programService.js's
+// importProgram). Absent on every pre-v1.1 program, which renders as before.
+function programMetaBits(p) {
+  const bits = [];
+  if (p.version) bits.push(`v${escapeHtml(String(p.version).replace(/^v/i, ''))}`);
+  if (p.importSource) bits.push(`imported from ${escapeHtml(String(p.importSource).toUpperCase())}`);
+  return bits;
+}
+
+// v1.1: optional program-level notes / decision rules (plain text, escaped).
+function programNotesHtml(p) {
+  const rules = Array.isArray(p.decisionRules) ? p.decisionRules : [];
+  if (!p.notes && rules.length === 0) return '';
+  return `
+    <div class="card">
+      <h3>Program notes</h3>
+      ${p.notes ? `<p class="program-notes">${escapeHtml(p.notes)}</p>` : ''}
+      ${rules.length ? `
+        <div class="card-label">Decision rules</div>
+        <ul class="notice-list">${rules.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+}
+
+function importButtonHtml() {
+  return '<a class="btn btn-secondary" href="#/program?import=1" id="import-program-link">Import Program</a>';
 }
 
 function programListSection(programs, activeProgramId) {
@@ -31,7 +63,7 @@ function programListSection(programs, activeProgramId) {
               <a href="#/program?id=${encodeURIComponent(p.id)}">${escapeHtml(p.name) || '(untitled program)'}</a>
               ${p.id === activeProgramId ? ' <span class="badge-active">Active</span>' : ''}
             </div>
-            <div class="card-sub">${(p.weeks?.length ?? 0)} week${(p.weeks?.length ?? 0) === 1 ? '' : 's'}</div>
+            <div class="card-sub">${(p.weeks?.length ?? 0)} week${(p.weeks?.length ?? 0) === 1 ? '' : 's'}${programMetaBits(p).map((b) => ` · ${b}`).join('')}</div>
           </div>
         </div>
         ${p.id !== activeProgramId ? `
@@ -56,6 +88,7 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
   return `
     <div class="card card-primary">
       <div class="card-title">${escapeHtml(program.name) || '(untitled program)'}</div>
+      ${programMetaBits(program).length ? `<p class="card-sub">${programMetaBits(program).join(' · ')}</p>` : ''}
       ${isActive
         ? `<p class="card-sub">Current position: Week ${currentPos?.week ?? '—'} · ${escapeHtml(currentDay?.name) || `Day ${currentPos?.dayOrder ?? '—'}`}</p>`
         : '<p class="text-muted">This program is not currently active.</p>'}
@@ -66,6 +99,7 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
       </div>
       <div id="program-inline-form"></div>
     </div>
+    ${programNotesHtml(program)}
 
     <div id="weeks-list">
       ${weeks.length === 0 ? '<p class="text-muted">This program has no weeks defined.</p>' : weeks.map((w) => {
@@ -73,6 +107,7 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
         return `
         <details class="card" ${isCurrentWeek ? 'open' : ''}>
           <summary>Week ${w.week}${weekSummary(w)}</summary>
+          ${w.notes ? `<p class="text-muted">${escapeHtml(w.notes)}</p>` : ''}
           <div class="program-day-list">
             ${days.length === 0 ? '<p class="text-muted">No days in this program yet.</p>' : days.map((d) => {
               const isCurrentDay = isCurrentWeek && currentPos?.dayOrder === d.order;
@@ -90,8 +125,19 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
   `;
 }
 
-export async function mount(root) {
-  const { programId, dayId } = parseParams();
+export async function mount(root, { path } = {}) {
+  // v1.1: legacy `#/import` (see config/app.config.js ROUTES) → the Program
+  // Import screen. replace() keeps the dead URL out of Back-button history.
+  if (path === '/import') {
+    location.replace('#/program?import=1');
+    return undefined;
+  }
+  const { programId, dayId, importMode } = parseParams();
+
+  if (importMode) {
+    const mod = await import('./programImport.js');
+    return mod.mount(root);
+  }
 
   if (dayId) {
     if (!programId) {
@@ -116,6 +162,7 @@ export async function mount(root) {
         <section class="program-view">
           <h2>Program</h2>
           <div class="empty-state"><p>No program installed yet.</p></div>
+          ${importButtonHtml()}
         </section>`;
       return;
     }
@@ -142,6 +189,7 @@ export async function mount(root) {
         <h2>Program</h2>
         ${programListSection(programs, activeProgramId)}
         ${overviewSection(program, days, { isActive, currentPos: isActive ? activeRun.current : null, totalWeeks })}
+        <div class="program-import-entry">${importButtonHtml()}</div>
       </section>`;
 
     const status = root.querySelector('#program-status');

@@ -47,10 +47,17 @@
 // existing id absent from the backup is deleted, every backup id is set.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { isGenerationSentinelId } from './trainingGeneration.js';
+
 export const SUPPORTED_BACKUP_SCHEMA_VERSION = 1;
 
 /** Field whitelists — never spread a backup object's fields onto a write blindly; only ever write fields this app itself defines for that document shape (see each write site elsewhere in the app for the matching shape). */
-const PROGRAM_FIELDS = ['schemaVersion', 'name', 'sourceFile', 'roundingRules', 'weeks', 'exerciseLibrary', 'importReviewFlags', 'createdAt', 'updatedAt'];
+// v1.1: 'version'/'importSource'/'importedAt'/'notes'/'decisionRules'/
+// 'generatedBy'/'currentOneRepMaxesAtImport' (reference only, never applied)
+// added — additive fields an imported program carries (js/services/programService.js's importProgram).
+// An older backup simply won't have them; without them here, restoring a
+// NEW backup would silently drop an imported program's version label.
+const PROGRAM_FIELDS = ['schemaVersion', 'name', 'sourceFile', 'roundingRules', 'weeks', 'exerciseLibrary', 'importReviewFlags', 'createdAt', 'updatedAt', 'version', 'importSource', 'importedAt', 'notes', 'decisionRules', 'generatedBy', 'currentOneRepMaxesAtImport'];
 const PROGRAM_RUN_FIELDS = ['programId', 'startDate', 'current', 'status', 'overrides', 'activeWorkoutId', 'programCompleted', 'programCompletedAt'];
 // Phase 4.1: 'completionState'/'lastEditedAt' added — both purely additive
 // (an old backup simply won't have them; History/Progress already treat a
@@ -313,7 +320,12 @@ export function planRestore({ backup, existing }) {
     spreadWhole: true,
   });
   const records = genericReplace(backup.records, existing.recordIds);
-  const progressionSuggestions = genericReplace(backup.progressionSuggestions, existing.progressionSuggestionIds);
+  // v22: generation sentinels (admin-reset bookkeeping, utils/trainingGeneration.js)
+  // are never deleted by a restore and never written from a backup.
+  const progressionSuggestions = genericReplace(
+    (backup.progressionSuggestions ?? []).filter((d) => !isGenerationSentinelId(d?.id)),
+    (existing.progressionSuggestionIds ?? []).filter((id) => !isGenerationSentinelId(id)),
+  );
   const nutrition = genericReplace(backup.nutrition, existing.nutritionIds);
 
   const profileUpdate = planProfileUpdate(backup.profile);

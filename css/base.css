@@ -78,8 +78,21 @@ input:focus-visible, button:focus-visible, a:focus-visible {
 .view-outlet {
   max-width: 640px;
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) calc(var(--nav-height) + var(--space-5));
+  /* v1.1: the bottom clearance for the fixed bottom nav moved from here to
+     .app-footer (the footer now sits between the content and the nav), so
+     the total space below a view's content is unchanged. */
+  padding: var(--space-4) var(--space-4) var(--space-3);
   min-height: calc(100vh - var(--header-height));
+}
+
+/* v1.1 — quiet "© heldback · Deadlift Tracker" footer, text from APP_META. */
+.app-footer {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  padding: var(--space-2) var(--space-4) calc(var(--nav-height) + var(--space-4) + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-nav {
@@ -159,6 +172,7 @@ input:focus-visible, button:focus-visible, a:focus-visible {
   }
   .nav-item { flex-direction: row; justify-content: flex-start; gap: var(--space-3); font-size: 0.9rem; padding: var(--space-3) var(--space-5); }
   .view-outlet { margin-left: 220px; max-width: 720px; }
+  .app-footer { margin-left: 220px; max-width: 720px; padding-bottom: var(--space-4); }
 }
 
 /*

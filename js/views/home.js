@@ -8,6 +8,9 @@ import {
 import { getLatestBodyweight } from '../services/measurementService.js';
 import { formatDate } from '../utils/dates.js';
 import { escapeHtml } from '../utils/dom.js';
+// v1.1: week count from the program's own `weeks` (an imported program need
+// not be 8 weeks long) — the same helper Program view already uses.
+import { totalWeeksOf } from '../utils/programEditModel.js';
 
 export async function mount(root) {
   const uid = getCurrentUser().uid;
@@ -81,7 +84,7 @@ export async function mount(root) {
       <div class="card card-primary">
         <div class="card-label">Current Program</div>
         <h2 class="card-title">${escapeHtml(program.name)}</h2>
-        <div class="card-sub">Week ${weekOfEight} / 8${weekMeta?.isDeload ? ' · Deload' : ''}${weekMeta?.isPrAttempt ? ' · PR attempt' : ''}</div>
+        <div class="card-sub">Week ${weekOfEight} / ${totalWeeksOf(program) || '—'}${weekMeta?.isDeload ? ' · Deload' : ''}${weekMeta?.isPrAttempt ? ' · PR attempt' : ''}</div>
       </div>
 
       <div class="card card-action">

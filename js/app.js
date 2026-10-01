@@ -3,6 +3,16 @@ import { startRouter } from './core/router.js';
 import { onAuthChange } from './core/auth.js';
 import { onAccessChange } from './core/access.js';
 import { registerServiceWorker } from './core/pwa.js';
+import { APP_TITLE } from '../config/app.config.js';
+import {
+  startTrainingGeneration, verifyTrainingGeneration, onTrainingGenerationStale,
+} from './services/trainingGenerationService.js';
+import { getUserProfile } from './services/userService.js';
+import { clearLocalActiveWorkoutMarker } from './services/workoutService.js';
+
+// v1.1: tab title from APP_META (index.html carries the same static text
+// for the moment before this module runs).
+document.title = APP_TITLE;
 
 const appRoot = document.getElementById('app');
 
@@ -38,8 +48,43 @@ function maybeRenderShell() {
 // Registered before startRouter() below, so the shell/outlet for a given
 // auth+access state always exists by the time router.js's OWN listeners
 // (registered inside startRouter) react to that same state change.
-onAuthChange((user) => { latestUser = user; maybeRenderShell(); });
-onAccessChange((access) => { latestAccess = access; maybeRenderShell(); });
+onAuthChange((user) => { latestUser = user; maybeRenderShell(); maybeStartTrainingGeneration(); });
+onAccessChange((access) => { latestAccess = access; maybeRenderShell(); maybeStartTrainingGeneration(); });
+
+// v22 — stale-device protection after an admin "Reset training data"
+// (services/trainingGenerationService.js). Started once per approved
+// session from the profile this device booted with; the server check runs
+// in the background and never blocks the UI.
+let generationUid = null;
+async function maybeStartTrainingGeneration() {
+  const uid = latestUser?.uid;
+  if (!uid || latestAccess.phase !== 'approved' || generationUid === uid) return;
+  generationUid = uid;
+  try {
+    await startTrainingGeneration(uid, await getUserProfile(uid));
+    verifyTrainingGeneration('boot', { force: true });
+  } catch (err) {
+    generationUid = null;
+    console.warn('Training-generation start failed (retried on next state change):', err);
+  }
+}
+
+// This device holds pre-reset state: training writes are already refused
+// (and the server rejects any that were queued). Drop the local workout
+// marker and reload from the server into the clean, reset state.
+onTrainingGenerationStale(({ uid }) => {
+  clearLocalActiveWorkoutMarker(uid);
+  const notice = document.createElement('div');
+  notice.className = 'update-banner';
+  notice.id = 'stale-reset-notice';
+  notice.setAttribute('role', 'status');
+  notice.textContent = 'Your training data was reset by an admin. Loading your fresh start…';
+  document.body.appendChild(notice);
+  setTimeout(() => {
+    history.replaceState(null, '', '#/home');
+    location.reload();
+  }, 1500);
+});
 
 startRouter();
 

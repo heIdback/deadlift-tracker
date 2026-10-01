@@ -14,6 +14,7 @@ import { isValidWeight } from '../utils/validation.js';
 import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 import { escapeHtml, safeUrl } from '../utils/dom.js';
 import { formatDate } from '../utils/dates.js';
+import { APP_META } from '../../config/app.config.js';
 
 const WORKOUT_CSV_COLUMNS = [
   { key: 'workoutId', header: 'workoutId' },
@@ -37,6 +38,7 @@ const WORKOUT_CSV_COLUMNS = [
   { key: 'rpe', header: 'rpe' },
   { key: 'note', header: 'note' },
   { key: 'completed', header: 'completed' },
+  { key: 'setStatus', header: 'setStatus' },
   { key: 'completedAt', header: 'completedAt' },
 ];
 
@@ -207,6 +209,8 @@ export async function mount(root) {
         </p>
         <div id="restore-panel"></div>
       </div>
+
+      <p class="about-line">${escapeHtml(APP_META.name)} ${escapeHtml(APP_META.version)} · by ${escapeHtml(APP_META.publisher)}</p>
     </section>
   `;
 

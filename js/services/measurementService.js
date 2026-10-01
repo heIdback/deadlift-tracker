@@ -1,10 +1,11 @@
 import {
-  collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp,
+  collection, doc, writeBatch, query, where, orderBy, limit, getDocs, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
 import { getDocsSafe } from '../utils/firestoreRead.js';
 import { sanitizeText, isValidWeight } from '../utils/validation.js';
+import { commitTrainingBatch } from './trainingGenerationService.js';
 
 const measurementsCol = (uid) => collection(db, 'users', uid, 'measurements');
 
@@ -17,7 +18,12 @@ export async function logBodyweight(uid, { kg, note = '' }) {
     unit: 'kg',
     note: sanitizeText(note, 200),
   };
-  await trackWrite(() => addDoc(measurementsCol(uid), { ...entry, date: serverTimestamp() }));
+  // v22: committed with the admin-reset generation guard (trainingGenerationService.js).
+  await trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.set(doc(measurementsCol(uid)), { ...entry, date: serverTimestamp() });
+    return commitTrainingBatch(uid, batch);
+  });
   // serverTimestamp() resolves later on the server; give the caller a
   // client-side Date so it can render immediately without waiting on a
   // round trip or re-querying (and without writing a second document).
