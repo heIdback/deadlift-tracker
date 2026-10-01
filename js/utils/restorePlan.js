@@ -113,6 +113,19 @@ export function validateBackupShape(json) {
 }
 
 /** A short, human-readable summary for the Restore confirmation screen — counts only, no content. */
+/**
+ * v22: a backup made BEFORE the user's last training reset (`boundaryMs`,
+ * profile.trainingResetAt) can't be restored — it would bring back the old
+ * program position, current 1RMs and in-progress workout, while its workout
+ * and 1RM history stay archived (utils/trainingReset.js). Unknown backup date
+ * after a reset → treated as before (conservative).
+ */
+export function isBackupBeforeReset(backup, boundaryMs) {
+  if (typeof boundaryMs !== 'number') return false;
+  const made = Date.parse(backup?.exportedAt ?? '');
+  return !Number.isFinite(made) || made < boundaryMs;
+}
+
 export function summarizeBackup(backup) {
   return {
     exportedAt: backup.exportedAt ?? null,

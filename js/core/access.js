@@ -22,6 +22,7 @@ import {
 import { db } from './firebase.js';
 import { onAuthChange } from './auth.js';
 import { ensureUserProfile, getMissingRequiredMaxes } from '../services/userService.js';
+import { applyPendingTrainingReset } from '../services/trainingResetService.js';
 import { ensureStarterProgramForUser } from '../services/programService.js';
 
 const accessDocRef = (uid) => doc(db, 'access', uid);
@@ -130,6 +131,16 @@ async function resolveForUser(user) {
           await ensureUserProfile(user);
         } catch (err) {
           console.error('ensureUserProfile failed:', err);
+        }
+
+        // v22: an admin may have requested a training reset for this account
+        // (Spark design — the user's own app applies it; utils/trainingReset.js).
+        // Applied BEFORE the onboarding check below, so a reset account lands
+        // straight on "enter your current 1RMs". Never blocks sign-in.
+        try {
+          await applyPendingTrainingReset(user.uid);
+        } catch (err) {
+          console.error('Pending training reset could not be applied (retried next time):', err);
         }
 
         // New-user onboarding (Phase 3E), same gating principle: runs ONLY

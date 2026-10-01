@@ -30,8 +30,9 @@ import { collection, query, where, getCountFromServer } from 'https://www.gstati
 import { db } from '../core/firebase.js';
 import { getUserProfile } from './userService.js';
 import { getPrimaryProgramContext, getProgramDays } from './programService.js';
-import { getInProgressWorkout, getLatestCompletedWorkout, listCompletedWorkouts, getWorkout } from './workoutService.js';
+import { getInProgressWorkout, getLatestCompletedWorkout, listCompletedWorkouts, getCurrentPeriodWorkout } from './workoutService.js';
 import { getLatestBodyweight } from './measurementService.js';
+import { getResetBoundaries } from './trainingResetService.js';
 
 const workoutsCol = (uid) => collection(db, 'users', uid, 'workouts');
 
@@ -54,11 +55,16 @@ const workoutsCol = (uid) => collection(db, 'users', uid, 'workouts');
  * needed (every query shape here already exists elsewhere in the app).
  */
 export async function getUserFitnessSummary(uid, { includeDayName = false } = {}) {
+  // v22: after an admin reset, count only workouts since the reset
+  // (server-side count; uses the existing status+finishedAt index).
+  const { training } = await getResetBoundaries(uid);
   const [programCtx, activeWorkout, lastCompleted, completedCountSnap] = await Promise.all([
     getPrimaryProgramContext(uid),
     getInProgressWorkout(uid),
     getLatestCompletedWorkout(uid),
-    getCountFromServer(query(workoutsCol(uid), where('status', '==', 'completed'))),
+    getCountFromServer(training
+      ? query(workoutsCol(uid), where('status', '==', 'completed'), where('finishedAt', '>=', training))
+      : query(workoutsCol(uid), where('status', '==', 'completed'))),
   ]);
 
   const { program, run } = programCtx;
@@ -128,5 +134,5 @@ export async function getUserDetailData(targetUid) {
 
 /** Read-only fetch of one specific workout snapshot, for the Admin "Workout Detail" drill-down. Identical read to what the owning user's own (future) History screen will use — see workoutService.getWorkout. */
 export async function getUserWorkoutDetail(targetUid, workoutId) {
-  return getWorkout(targetUid, workoutId);
+  return getCurrentPeriodWorkout(targetUid, workoutId); // v22: archived (pre-reset) → not found
 }

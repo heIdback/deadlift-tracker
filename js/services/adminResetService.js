@@ -1,73 +1,119 @@
-// Admin "Reset training data" — client side. The client NEVER deletes or
-// writes another user's data (firestore.rules forbid it, and keep forbidding
-// it): the actual reset runs in the `adminResetUserFitness` Cloud Function
-// (functions/src/resetCore.js), which re-checks the caller's admin role in
-// /access and the typed confirmation on the server.
+// Admin "Reset training data" — admin side (Spark/free plan, no Cloud
+// Functions, firestore.rules unchanged). Model: ../utils/trainingReset.js.
 //
-// This module only (a) reads counts for the confirmation screen, using the
-// read access an approved admin already has, and (b) calls the function.
-// The Functions SDK is imported lazily, so the Admin screens keep working
-// offline exactly as before; the reset itself requires a connection.
-import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
-import { app, db } from '../core/firebase.js';
+// The admin's app never writes another user's training data (the rules
+// forbid it). It writes a RESET REQUEST onto /access/{targetUid} — the one
+// document an approved admin may update — and the target's own app applies
+// it (services/trainingResetService.js) the next time it is online. An admin
+// resetting their OWN account gets it applied immediately.
+import {
+  doc, collection, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction,
+} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { db } from '../core/firebase.js';
+import { trackWrite } from '../core/sync-status.js';
+import {
+  expectedResetConfirmation, evaluateResetRequest, newResetId, trainingBoundaryOf, bodyweightBoundaryOf,
+  isArchivedWorkout, isArchivedMax, isArchivedMeasurement, toMillis,
+} from '../utils/trainingReset.js';
+import { applyOwnTrainingReset } from './trainingResetService.js';
 
-const FUNCTIONS_SDK_URL = 'https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js';
-export const RESET_FUNCTION_NAME = 'adminResetUserFitness';
-
-/** Must match functions/src/resetCore.js's expectedConfirmation exactly (the server re-checks it). */
-export function expectedConfirmation(targetAccess, targetUid) {
-  const email = typeof targetAccess?.email === 'string' ? targetAccess.email.trim() : '';
-  return `RESET ${email || targetUid}`;
-}
+export const expectedConfirmation = (access, uid) => expectedResetConfirmation(access?.email, uid);
 
 const sub = (uid, name) => getDocs(collection(db, 'users', uid, name));
+const offlineError = () => Object.assign(new Error('No connection. Nothing was changed — try again when online.'), { code: 'unavailable' });
+const isOffline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
 
-/** Counts shown on confirmation step 1 (admin read access only — nothing is written). */
+/** Current-period counts for confirmation step 1 (admin read access only — nothing is written). */
 export async function getResetPreview(targetUid) {
-  const [workouts, maxes, measurements, runs, programs] = await Promise.all([
+  const [profileSnap, workouts, maxes, measurements, runs, programs] = await Promise.all([
+    getDoc(doc(db, 'users', targetUid)),
     sub(targetUid, 'workouts'), sub(targetUid, 'maxes'), sub(targetUid, 'measurements'),
     sub(targetUid, 'programRuns'), sub(targetUid, 'programs'),
   ]);
+  const profile = profileSnap.exists() ? profileSnap.data() : null;
+  const tb = trainingBoundaryOf(profile);
+  const bb = bodyweightBoundaryOf(profile);
+  const currentWorkouts = workouts.docs.map((d) => d.data()).filter((w) => !isArchivedWorkout(w, tb));
   const programList = programs.docs.map((d) => ({ id: d.id, name: d.data().name ?? d.id }));
-  const activeRun = runs.docs.map((d) => d.data()).find((r) => r.status === 'active') ?? null;
+  // same choice as the reset itself (utils/trainingReset.js pickResetPosition): most recently started active run
+  const activeRun = runs.docs.map((d) => d.data()).filter((r) => r.status === 'active')
+    .sort((a, b) => (toMillis(b.startDate) ?? 0) - (toMillis(a.startDate) ?? 0))[0] ?? null;
   return {
-    workouts: workouts.size,
-    inProgressWorkouts: workouts.docs.filter((d) => d.data().status === 'in_progress').length,
-    maxHistory: maxes.size,
-    measurements: measurements.size,
+    workouts: currentWorkouts.length,
+    inProgressWorkouts: currentWorkouts.filter((w) => w.status === 'in_progress').length,
+    maxHistory: maxes.docs.filter((d) => !isArchivedMax(d.data(), tb)).length,
+    measurements: measurements.docs.filter((d) => !isArchivedMeasurement(d.data(), bb)).length,
     programRuns: runs.size,
     programs: programList,
     activeProgram: activeRun ? (programList.find((p) => p.id === activeRun.programId) ?? null) : null,
   };
 }
 
-const ERROR_TEXT = {
-  unauthenticated: 'You are signed out. Sign in again and retry.',
-  'permission-denied': 'Only an approved admin can reset training data.',
-  'not-found': 'That user no longer exists.',
-  'failed-precondition': 'The confirmation text did not match. Nothing was reset.',
-  'invalid-argument': 'The request was not valid. Nothing was reset.',
-  aborted: null, // server message is specific (already running / incomplete)
-  unavailable: 'No connection to the server. Nothing was reported as reset — try again when online.',
-};
+/** Where this user's reset stands: none | pending | applied | cancelled | invalid. */
+export async function getResetStatus(targetUid) {
+  const [accessSnap, profileSnap] = await Promise.all([getDoc(doc(db, 'access', targetUid)), getDoc(doc(db, 'users', targetUid))]);
+  const access = accessSnap.exists() ? accessSnap.data() : null;
+  const profile = profileSnap.exists() ? profileSnap.data() : null;
+  const ev = evaluateResetRequest({ access, profile, uid: targetUid });
+  return { ...ev, applied: profile?.trainingReset ?? null };
+}
 
-/** Calls the server. Resolves ONLY with the server's success result; anything else rejects. */
-export async function runAdminReset(targetUid, confirmation) {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    const e = new Error(ERROR_TEXT.unavailable);
-    e.code = 'unavailable';
-    throw e;
+/**
+ * Writes the reset request (after the UI's two confirmations; the typed text
+ * is re-checked here and again by the target's app). Self-reset is applied
+ * immediately. Resolves {mode: 'requested', id} | {mode: 'applied', result}.
+ */
+export async function requestTrainingReset({ adminUid, targetUid, confirmation, deleteBodyweight = false }) {
+  if (isOffline()) throw offlineError();
+  if (targetUid === adminUid) {
+    // Own account: the owner may do every write itself — no request needed
+    // (and none could be written if this access record was created by hand).
+    const result = await applyOwnTrainingReset(adminUid, { confirmation, deleteBodyweight });
+    if (result.state === 'applied') return { mode: 'applied', result };
+    throw Object.assign(new Error(result.state === 'invalid' ? 'The confirmation text did not match. Nothing was changed.' : 'The reset could not be applied. Nothing was changed.'), { code: 'failed-precondition' });
   }
-  const { getFunctions, httpsCallable } = await import(FUNCTIONS_SDK_URL);
-  const call = httpsCallable(getFunctions(app), RESET_FUNCTION_NAME, { timeout: 300000 });
+  const accessRef = doc(db, 'access', targetUid);
+  const snap = await getDoc(accessRef);
+  if (!snap.exists()) throw Object.assign(new Error('That user no longer exists.'), { code: 'not-found' });
+  const access = snap.data();
+  if (access.status !== 'approved') throw Object.assign(new Error('Only an approved user can be reset.'), { code: 'failed-precondition' });
+  if (confirmation !== expectedConfirmation(access, targetUid)) {
+    throw Object.assign(new Error('The confirmation text did not match. Nothing was changed.'), { code: 'failed-precondition' });
+  }
+  const id = newResetId();
   try {
-    const { data } = await call({ targetUid, confirmation });
-    if (!data || data.ok !== true) throw Object.assign(new Error('The server did not confirm the reset.'), { code: 'internal' });
-    return data;
+    await trackWrite(() => updateDoc(accessRef, {
+      trainingResetRequest: {
+        id, requestedBy: adminUid, requestedAt: serverTimestamp(), confirmation, deleteBodyweight: deleteBodyweight === true, status: 'requested',
+      },
+      approvedBy: adminUid, // required by the access rule for an approved account
+    }));
   } catch (err) {
-    const code = String(err?.code ?? 'internal').replace(/^functions\//, '');
-    const e = new Error(ERROR_TEXT[code] ?? err?.message ?? 'The reset did not complete.');
-    e.code = code;
-    throw e;
+    throw Object.assign(new Error(err?.code === 'permission-denied'
+      ? 'The security rules refused the request: only an approved admin can request a reset (a hand-made access record with missing fields is refused too). Nothing was changed.'
+      : 'The reset request could not be saved. Nothing was changed.'), { code: err?.code ?? 'internal' });
   }
+  return { mode: 'requested', id };
+}
+
+/**
+ * Withdraws a request that has not been applied yet. A transaction that also
+ * reads the user's profile: if their app applied it a moment ago, the cancel
+ * fails and says so instead of claiming "nothing was changed".
+ */
+export async function cancelTrainingResetRequest({ adminUid, targetUid }) {
+  if (isOffline()) throw offlineError();
+  const accessRef = doc(db, 'access', targetUid);
+  await trackWrite(() => runTransaction(db, async (tx) => {
+    const [a, p] = [await tx.get(accessRef), await tx.get(doc(db, 'users', targetUid))];
+    const ev = evaluateResetRequest({ access: a.data(), profile: p.exists() ? p.data() : null, uid: targetUid });
+    if (ev.state === 'applied') throw Object.assign(new Error('Too late — the user\'s app has already applied this reset.'), { code: 'failed-precondition' });
+    if (ev.state !== 'pending') throw Object.assign(new Error('There is no pending reset request to cancel.'), { code: 'failed-precondition' });
+    tx.update(accessRef, {
+      'trainingResetRequest.status': 'cancelled',
+      'trainingResetRequest.cancelledBy': adminUid,
+      'trainingResetRequest.cancelledAt': serverTimestamp(),
+      approvedBy: adminUid,
+    });
+  }));
 }

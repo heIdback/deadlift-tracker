@@ -7,6 +7,9 @@ import {
   buildUserDataExport, flattenWorkoutsForCsv, flattenMeasurementsForCsv, flattenMaxHistoryForCsv,
 } from '../services/exportService.js';
 import { parseAndValidateBackupFile, restoreUserData } from '../services/restoreService.js';
+import { getResetBoundaries } from '../services/trainingResetService.js';
+import { isBackupBeforeReset } from '../utils/restorePlan.js';
+import { toMillis } from '../utils/trainingReset.js';
 import { buildCsv } from '../utils/csv.js';
 import { downloadJson, downloadCsv } from '../utils/download.js';
 import { isoOrEmpty } from '../utils/exportSerialize.js';
@@ -365,6 +368,17 @@ export async function mount(root) {
         <button type="button" class="btn btn-secondary" id="restore-cancel-btn">Cancel</button>
       </div>
       <p class="form-status" id="restore-status" role="status"></p>`;
+
+    // v22: a backup from before a training reset can't be restored (also enforced in restoreService).
+    getResetBoundaries(uid).then(({ training }) => {
+      if (!isBackupBeforeReset(backup, toMillis(training))) return;
+      const note = document.createElement('p');
+      note.className = 'login-error';
+      note.id = 'restore-reset-warning';
+      note.textContent = `This backup was made before your training data was reset (${formatDate(training)}), so it can't be restored. Use a backup made after the reset.`;
+      restorePanel.querySelector('.card-notice')?.after(note);
+      restorePanel.querySelector('#restore-confirm-btn')?.remove();
+    }).catch(() => {});
 
     restorePanel.querySelector('#restore-cancel-btn').addEventListener('click', () => renderChooseFileState());
     restorePanel.querySelector('#restore-confirm-btn').addEventListener('click', async () => {

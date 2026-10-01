@@ -54,7 +54,7 @@
 // formatHumanDuration — a display-only concern, no timestamp storage
 // changed); (3) scroll-to-top after a successful Edit-mode Save or Cancel.
 import { getCurrentUser } from '../core/auth.js';
-import { listCompletedWorkouts, getWorkout, updateCompletedWorkoutLog } from '../services/workoutService.js';
+import { listCompletedWorkouts, getCurrentPeriodWorkout, updateCompletedWorkoutLog } from '../services/workoutService.js';
 import { getProgram } from '../services/programService.js';
 import {
   resolveCompletionState, isEditableCompletedWorkout, classifyCompletionState, EXPLICIT_SKIP_STATE,
@@ -575,7 +575,7 @@ export async function mount(root) {
   const workoutId = params.get('workoutId');
 
   if (workoutId) {
-    const workout = await getWorkout(uid, workoutId);
+    const workout = await getCurrentPeriodWorkout(uid, workoutId); // v22: archived (pre-reset) → not found
     // Phase 5B, Package 1: a single-workout detail has no history of its
     // own to compare against, so PR detection here needs the FULL completed
     // history, same limit/query History's own list already uses (and the

@@ -556,3 +556,6 @@
 .admin-view .profile-header > div { min-width: 0; }
 .admin-view .profile-header h2,
 .admin-view .profile-header p { overflow-wrap: anywhere; }
+/* Admin reset: optional "also delete bodyweight log" choice. */
+.reset-option { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-2) 0; overflow-wrap: anywhere; }
+.reset-option input { flex: none; width: 22px; height: 22px; margin-top: 2px; }

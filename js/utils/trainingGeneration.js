@@ -6,17 +6,15 @@
 //   - users/{uid}.trainingGeneration: a random token, changed by EVERY
 //     successful admin reset (absent → the 'initial' generation);
 //   - users/{uid}/progressionSuggestions/__training-generation-<token>: the
-//     generation's SENTINEL document. The reset deletes the old sentinel and
-//     creates the new one in the same batch that changes the token;
+//     generation's SENTINEL document. The reset (applied by the user's own
+//     app — services/trainingResetService.js) deletes the old sentinel and
+//     creates the new one in the same transaction that changes the token;
 //   - every client write of training state is a batch that also
 //     `update()`s its generation's sentinel. `update` requires the document
 //     to exist, so once a reset has removed that sentinel the SERVER rejects
 //     the whole batch atomically — including writes queued offline before
 //     the reset and replayed afterwards. No security-rules change is needed.
 //
-// functions/src/resetCore.js carries server copies of these constants
-// (functions/ is deployed on its own); tests/unit/trainingGeneration.test.mjs
-// pins that they match.
 export const INITIAL_GENERATION = 'initial';
 export const GENERATION_SENTINEL_COLLECTION = 'progressionSuggestions';
 export const GENERATION_SENTINEL_PREFIX = '__training-generation-';

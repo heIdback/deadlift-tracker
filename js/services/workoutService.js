@@ -16,6 +16,20 @@ import { isOfflineUnavailableError } from '../utils/offlineError.js';
 // commitTrainingBatch — the admin-reset generation guard (stale devices can't
 // resurrect reset data). Same commit/promise semantics as before.
 import { commitTrainingBatch, assertTrainingStateWritable } from './trainingGenerationService.js';
+// v22 (Spark admin reset): workouts from before an admin reset are archived —
+// they can't be deleted under the rules, so every read below hides anything
+// older than the user's trainingResetAt (utils/trainingReset.js). Filtering
+// is done here, client-side, on the existing queries: no new indexes, and an
+// offline workout whose server time is still pending is never hidden.
+import { getResetBoundaries } from './trainingResetService.js';
+import { isArchivedWorkout, toMillis } from '../utils/trainingReset.js';
+// v23: skip ahead — jump forward in the program, logging the days in between as Skipped.
+import { planSkipAhead, orderTiesLatestPositionFirst } from '../utils/skipAhead.js';
+
+async function hideArchived(uid, workouts) {
+  const { training } = await getResetBoundaries(uid);
+  return training ? workouts.filter((w) => !isArchivedWorkout(w, training)) : workouts;
+}
 
 const workoutsCol = (uid) => collection(db, 'users', uid, 'workouts');
 const workoutDocRef = (uid, workoutId) => doc(workoutsCol(uid), workoutId);
@@ -72,6 +86,12 @@ export async function getWorkout(uid, workoutId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
+/** History detail: a workout from before an admin reset is treated as not found (v22). */
+export async function getCurrentPeriodWorkout(uid, workoutId) {
+  const w = await getWorkout(uid, workoutId);
+  return w ? ((await hideArchived(uid, [w]))[0] ?? null) : null;
+}
+
 /**
  * Returns the in-progress workout, if any, via a plain query. Used as the
  * third, self-healing fallback layer by resolveActiveWorkout — not depended
@@ -104,7 +124,7 @@ export async function getInProgressWorkout(uid) {
   const snap = await getDocsSafe(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  return (await hideArchived(uid, [{ id: d.id, ...d.data() }]))[0] ?? null;
 }
 
 /**
@@ -441,7 +461,7 @@ export async function getLatestCompletedWorkout(uid) {
   const snap = await getDocsSafe(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  return (await hideArchived(uid, [{ id: d.id, ...d.data() }]))[0] ?? null; // newest is archived → nothing since the reset
 }
 
 /**
@@ -471,7 +491,10 @@ export async function listCompletedWorkouts(uid, max = 10) {
     limit(max),
   );
   const snap = await getDocsSafe(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Newest-first, so archived entries can only be at the tail. Sessions skipped
+  // together (v23 skip ahead) share one server time: order those latest-position-first.
+  const list = await hideArchived(uid, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  return orderTiesLatestPositionFirst(list, (w) => toMillis(w.finishedAt) ?? null);
 }
 
 /**
@@ -511,7 +534,8 @@ export async function countCompletedSince(uid, sinceDate) {
     where('finishedAt', '>=', sinceDate),
   );
   const snap = await getDocsSafe(q);
-  return snap.docs.filter((d) => COUNTED_COMPLETION_STATES.has(resolveCompletionState(d.data()))).length;
+  const current = await hideArchived(uid, snap.docs.map((d) => d.data()));
+  return current.filter((w) => COUNTED_COMPLETION_STATES.has(resolveCompletionState(w))).length;
 }
 
 /**
@@ -927,6 +951,90 @@ export async function skipWorkout(uid, workout, reason = '') {
 }
 
 /**
+ * v23 — Skip ahead. Jumps the program run FORWARD to a later day and writes
+ * every session in between (the current day included) to History as an
+ * explicit Skip — same document shape as skipWorkout's result (status
+ * 'completed', completionState 'skipped', explicitSkip true, the same
+ * optional reason on each) — all in ONE atomic, offline-safe batch together
+ * with the run's new position. Nothing is half-skipped: the batch lands whole
+ * or not at all, and it goes through commitTrainingBatch like every other
+ * training write (stale-device guard after an admin reset).
+ *
+ * Needs no rules change: an owner may create a 'completed' workout (the same
+ * rule backfill/restore use) and update their own programRun.
+ *
+ * Refuses while a workout is in progress (finish or skip it first), when the
+ * target is not one of the offered forward days (utils/skipAhead.js), or for
+ * a second call while one is running. Like Start/Finish, the commit is
+ * invoked and NOT awaited (an offline write would otherwise never settle);
+ * the local cache already holds the result when this returns. Known limit,
+ * same as starting a workout: a batch can't check the run's server state, so
+ * two devices acting at the same moment could each apply their own jump.
+ */
+const inFlightSkipAhead = new Set();
+
+export async function skipAheadToPosition(uid, {
+  run, program, days, profile, target, reason = '',
+}) {
+  if (!run) throw new Error('No active program run yet — start the program first.');
+  if (!program) throw new Error('Program not found for the active run.');
+  if (inFlightSkipAhead.has(uid)) throw new Error('A skip is already in progress.');
+  inFlightSkipAhead.add(uid); // synchronous, before any await — a double tap can't pass twice
+  try {
+    assertTrainingStateWritable(uid);
+    if (await resolveActiveWorkout(uid, run)) {
+      throw new Error('Finish or skip the workout in progress first.');
+    }
+    const plan = planSkipAhead({ days, weeks: program.weeks ?? [], current: run.current, target, reason });
+    const currentMaxes = profile?.currentMaxes ?? {};
+    const rounding = profile?.settings?.rounding ?? {};
+
+    const batch = writeBatch(db);
+    plan.skipped.forEach((pos) => {
+      const day = days.find((d) => d.order === pos.dayOrder);
+      if (!day) throw new Error('Could not resolve a day of the program template.');
+      // The same immutable snapshot a started workout would have had, so a
+      // skipped entry opens in History like any other skipped workout.
+      const exercises = orderExercisesWarmupFirst(
+        buildResolvedExerciseList(day, pos.week, { currentMaxes, rounding }).map((ex) => ({ ...ex, sets: generateSetsForExercise(ex) })),
+      );
+      batch.set(doc(workoutsCol(uid)), {
+        schemaVersion: 1,
+        status: 'completed',
+        programId: program.id,
+        programRunId: run.id,
+        week: pos.week,
+        dayOrder: pos.dayOrder,
+        dayId: day.id,
+        dayName: day.name,
+        exercises,
+        notes: '',
+        startedAt: serverTimestamp(),
+        finishedAt: serverTimestamp(),
+        durationSec: null,
+        completionState: EXPLICIT_SKIP_STATE,
+        explicitSkip: true,
+        skipReason: plan.skipReason,
+      });
+    });
+    batch.update(runDocRef(uid, run.id), {
+      activeWorkoutId: null,
+      current: { week: plan.target.week, dayOrder: plan.target.dayOrder },
+    });
+
+    return await trackWrite(async () => {
+      commitTrainingBatch(uid, batch).then(
+        () => console.debug('[SKIP-AHEAD] batch commit() backend-acknowledged', { skipped: plan.skipped.length }),
+        (err) => console.error('[SKIP-AHEAD] batch commit() failed', err),
+      );
+      return { skippedCount: plan.skipped.length, skipped: plan.skipped, target: plan.target };
+    });
+  } finally {
+    inFlightSkipAhead.delete(uid);
+  }
+}
+
+/**
  * Phase 4.1 Goal C/D — the ONLY way a completed workout's ACTUAL LOGGING
  * data may change after Finish. Deliberately nothing like
  * startOrResumeWorkout/finishWorkout:
@@ -959,6 +1067,9 @@ export async function updateCompletedWorkoutLog(uid, workout, exercises) {
   }
   if (!isEditableCompletedWorkout(workout)) {
     throw new Error('This workout is outside its edit window (or was explicitly skipped) and can no longer be corrected.');
+  }
+  if ((await hideArchived(uid, [workout])).length === 0) {
+    throw new Error('This workout is from before your training reset and can no longer be changed.');
   }
   // v1.1: Firestore Rules pin every top-level identity/plan/timing field but
   // cannot look inside the `exercises` array, so the "only actual logging
@@ -1032,16 +1143,20 @@ export async function updateCompletedWorkoutLog(uid, workout, exercises) {
 export async function reconcileLegacyProgramPosition(uid, run) {
   if (!run || run.programCompleted) return run;
 
+  // v22: after an admin reset an archived workout must not count as "this
+  // position is already done" — so with a reset boundary every match is read
+  // and filtered (same index; never-reset accounts run the original query).
+  const { training } = await getResetBoundaries(uid);
   const q = query(
     workoutsCol(uid),
     where('status', '==', 'completed'),
     where('programId', '==', run.programId),
     where('week', '==', run.current.week),
     where('dayOrder', '==', run.current.dayOrder),
-    limit(1),
+    ...(training ? [] : [limit(1)]),
   );
   const snap = await getDocsSafe(q);
-  if (snap.empty) return run; // current position isn't already done — nothing to reconcile
+  if (!snap.docs.some((d) => !isArchivedWorkout(d.data(), training))) return run; // current position isn't already done — nothing to reconcile
 
   const [days, program] = await Promise.all([
     getProgramDays(uid, run.programId),

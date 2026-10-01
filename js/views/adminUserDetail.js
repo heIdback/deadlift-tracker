@@ -172,9 +172,10 @@ export async function mount(root, { targetUid }) {
 
   renderUserDetail(root, targetUid, access, detail);
 
-  // v1.1: permanent "Reset training data" (admin-only screen; the server
-  // re-verifies admin status). Loaded on demand so this read-only screen's
-  // own module graph is unchanged.
+  // v22: permanent "Reset training data" (admin-only screen). The admin's
+  // app only writes a reset request to /access/{uid} (firestore.rules allow
+  // only approved admins to); the user's own app applies it. Loaded on demand
+  // so this read-only screen's own module graph is unchanged.
   const slot = root.querySelector('#admin-reset-slot');
   if (slot) {
     try {

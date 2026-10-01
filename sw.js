@@ -373,10 +373,10 @@
 //   - heldback branding (APP_META publisher; login byline, footer, Profile).
 //   - Program Import accepts flat warm-up ramps ({type:'sets'}); the Day
 //     editor keeps them read-only and intact.
-//   - Admin "Reset training data": js/views/adminReset.js +
-//     js/services/adminResetService.js (lazy-loaded from Admin → user). The
-//     reset runs server-side (Cloud Function `adminResetUserFitness`); its
-//     Functions SDK + network call are never cached (not in the lists below).
+//   - Admin "Reset training data" (Spark/free plan, no Cloud Functions):
+//     js/views/adminReset.js + js/services/adminResetService.js (lazy-loaded
+//     from Admin → user) write a request; the user's own app applies it via
+//     js/services/trainingResetService.js + js/utils/trainingReset.js.
 //   - Stale-device guard after an admin reset: js/services/trainingGenerationService.js
 //     + js/utils/trainingGeneration.js (static imports of the app's write services).
 //   - '#/import' (dead route) now redirects to Program Import; Home shows
@@ -384,7 +384,15 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
-const CACHE_VERSION = 'v23';
+// v25 — Admin page: "Your account" → Reset training data for the admin's OWN
+// account (js/views/admin.js changed; no new module). Cache bump only, so an
+// installed v24 browser re-fetches it (cache-first never re-checks a hit).
+//
+// v24 — "Choose another day…" (skip ahead) on the Workout Start preview:
+// js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
+// + views/workout.js) and is listed below; workoutService.js and
+// views/workout.js changed, so the shell cache name changes too.
+const CACHE_VERSION = 'v25';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -420,6 +428,7 @@ const SHELL_MODULES = [
   'js/services/programSwitchService.js',
   'js/services/restoreService.js',
   'js/services/trainingGenerationService.js',
+  'js/services/trainingResetService.js',
   'js/services/userService.js',
   'js/services/workoutService.js',
   'js/utils/adminStats.js',
@@ -444,8 +453,10 @@ const SHELL_MODULES = [
   'js/utils/requiredLifts.js',
   'js/utils/restorePlan.js',
   'js/utils/setLogging.js',
+  'js/utils/skipAhead.js',
   'js/utils/starterProgram.js',
   'js/utils/trainingGeneration.js',
+  'js/utils/trainingReset.js',
   'js/utils/validation.js',
   'js/utils/workoutCompletion.js',
   'js/utils/workoutSnapshot.js',

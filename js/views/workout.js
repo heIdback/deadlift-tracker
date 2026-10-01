@@ -9,7 +9,9 @@ import { getPrimaryProgramContext, getProgramDays, startProgramRun } from '../se
 import {
   resolveActiveWorkout, startOrResumeWorkoutForCurrentPosition,
   updateWorkoutExercises, subscribeToWorkoutLocalStatus, finishWorkout, skipWorkout, reconcileLegacyProgramPosition,
+  skipAheadToPosition,
 } from '../services/workoutService.js';
+import { listSkipTargets, MAX_SKIP_REASON_LENGTH } from '../utils/skipAhead.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
 import { countLoggableSets } from '../utils/workoutCompletion.js';
 import { setBlockHtml, wireSetBlock } from '../components/setResult.js';
@@ -41,6 +43,10 @@ let pendingFlush = null;
 // `unmount` can detach it on a normal in-app navigation away from Workout
 // too, and it never leaks a second set of listeners across repeated visits.
 let pendingHideCleanup = null;
+
+// One-line result of a "Choose another day" jump, shown once on the freshly
+// re-rendered Start preview (the view re-mounts itself after the jump).
+let pendingNotice = '';
 
 function formatReps(reps, durationSec) {
   if (reps != null && typeof reps === 'object') return `${reps.min}-${reps.max}`;
@@ -96,6 +102,8 @@ function renderExercisePreview(ex) {
 
 export async function mount(root) {
   const uid = getCurrentUser().uid;
+  const notice = pendingNotice; // shown once, on THIS render only
+  pendingNotice = '';
   root.innerHTML = `<div class="loading-state" role="status">Loading workout…</div>`;
 
   // Whatever happens below, this is what the router calls on the way out.
@@ -163,8 +171,12 @@ export async function mount(root) {
     rounding: profile?.settings?.rounding ?? {},
   }));
 
+  // v23: days the lifter may jump ahead to (needs a started run; none left → no button).
+  const skipTargets = run ? listSkipTargets({ days, weeks: program.weeks ?? [], current: run.current }) : [];
+
   root.innerHTML = `
     <section class="workout-view">
+      ${notice ? `<p class="form-status" id="skip-ahead-result" role="status">${escapeHtml(notice)}</p>` : ''}
       <div class="card card-primary">
         <div class="card-label">Planned — Week ${week}</div>
         <h2 class="card-title">${escapeHtml(day.name)}</h2>
@@ -173,7 +185,18 @@ export async function mount(root) {
       ${preview.map(renderExercisePreview).join('')}
       <button class="btn btn-primary btn-large" id="start-btn">START WORKOUT</button>
       <p class="form-status" id="start-status" role="status"></p>
+      ${skipTargets.length ? `
+      <div id="skip-ahead-section">
+        <button type="button" class="btn btn-secondary" id="skip-ahead-open">Choose another day…</button>
+        <div id="skip-ahead-panel" hidden></div>
+      </div>` : ''}
     </section>`;
+
+  if (skipTargets.length) {
+    root.querySelector('#skip-ahead-open').addEventListener('click', () => openSkipAhead({
+      root, uid, run, program, days, profile, targets: skipTargets,
+    }));
+  }
 
   root.querySelector('#start-btn').addEventListener('click', async (e) => {
     const btn = e.target;
@@ -212,6 +235,97 @@ export async function mount(root) {
   });
 
   return unmount;
+}
+
+/**
+ * v23 — "Choose another day…": jump forward in the program. The sessions in
+ * between (the current day included) are written to History as Skipped in one
+ * atomic step (workoutService.skipAheadToPosition). The panel itself is the
+ * confirmation: it lists exactly what will be skipped and says it can't be
+ * undone. Cancel closes it without changing anything.
+ */
+function openSkipAhead({
+  root, uid, run, program, days, profile, targets,
+}) {
+  const panel = root.querySelector('#skip-ahead-panel');
+  const opener = root.querySelector('#skip-ahead-open');
+  const label = (p) => `Week ${p.week} · ${p.dayName}`;
+  opener.hidden = true;
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="card">
+      <h3 class="card-title">Choose another day</h3>
+      <p class="text-muted">Jump ahead in the program. The sessions you skip are saved to History as Skipped, so you don't have to skip them one by one.</p>
+      <label class="field">Go to
+        <select id="skip-ahead-target">${targets.map((t, i) => `<option value="${i}">${escapeHtml(label(t))}</option>`).join('')}</select>
+      </label>
+      <div id="skip-ahead-summary"></div>
+      <label class="field">Reason (optional — shown on each skipped workout)
+        <textarea id="skip-ahead-reason" rows="2" maxlength="${MAX_SKIP_REASON_LENGTH}"></textarea>
+      </label>
+      <p><strong>This can't be undone.</strong> Skipped sessions stay in your History.</p>
+      <div class="btn-stack">
+        <button type="button" class="btn btn-danger" id="skip-ahead-confirm"></button>
+        <button type="button" class="btn btn-secondary" id="skip-ahead-cancel">Cancel</button>
+      </div>
+      <p class="form-status" id="skip-ahead-status" role="status"></p>
+    </div>`;
+
+  const select = panel.querySelector('#skip-ahead-target');
+  const confirm = panel.querySelector('#skip-ahead-confirm');
+  const status = panel.querySelector('#skip-ahead-status');
+  const current = () => targets[Number(select.value)];
+
+  function refresh() {
+    const t = current();
+    const n = t.skipped.length;
+    panel.querySelector('#skip-ahead-summary').innerHTML = `
+      <p>Skipping <strong>${n}</strong> session${n === 1 ? '' : 's'}:</p>
+      <ul class="notice-list">${t.skipped.map((p) => `<li>${escapeHtml(label(p))}</li>`).join('')}</ul>
+      <p>Then continue with <strong>${escapeHtml(label(t))}</strong>.</p>`;
+    confirm.textContent = `Skip ${n} and go to ${t.dayName}`;
+  }
+  select.addEventListener('change', refresh);
+  refresh();
+
+  panel.querySelector('#skip-ahead-cancel').addEventListener('click', () => {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    opener.hidden = false;
+  });
+
+  confirm.addEventListener('click', async () => {
+    if (confirm.disabled) return; // a raw click still reaches a disabled button's handler
+    const t = current();
+    const reason = panel.querySelector('#skip-ahead-reason').value;
+    panel.querySelectorAll('button, select, textarea').forEach((el) => { el.disabled = true; });
+    root.querySelector('#start-btn').disabled = true;
+    status.textContent = 'Skipping…';
+    let result;
+    try {
+      result = await skipAheadToPosition(uid, {
+        run, program, days, profile, target: { week: t.week, dayOrder: t.dayOrder }, reason,
+      });
+    } catch (err) {
+      console.error('[SKIP-AHEAD] failed', err);
+      status.textContent = `Nothing was skipped: ${err.message}`;
+      panel.querySelectorAll('button, select, textarea').forEach((el) => { el.disabled = false; });
+      root.querySelector('#start-btn').disabled = false;
+      return;
+    }
+    // From here the jump HAS been applied (locally, synced when online): the
+    // controls stay disabled whatever happens next — `run` and `targets` above
+    // are now stale and must never be used for a second jump.
+    const n = result.skippedCount;
+    pendingNotice = `Skipped ${n} session${n === 1 ? '' : 's'}. Now at ${label(result.target)}.`;
+    try {
+      await mount(root); // re-render the Start preview from the new position
+    } catch (err) {
+      console.error('[SKIP-AHEAD] re-render failed', err);
+      pendingNotice = '';
+      status.textContent = `Skipped ${n} session${n === 1 ? '' : 's'} — reload the page to continue.`;
+    }
+  });
 }
 
 /**

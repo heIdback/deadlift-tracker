@@ -6,6 +6,15 @@ import { trackWrite } from '../core/sync-status.js';
 import { getDocsSafe } from '../utils/firestoreRead.js';
 import { sanitizeText, isValidWeight } from '../utils/validation.js';
 import { commitTrainingBatch } from './trainingGenerationService.js';
+import { getResetBoundaries } from './trainingResetService.js';
+import { isArchivedMeasurement } from '../utils/trainingReset.js';
+
+// v22: if an admin reset included the bodyweight log, entries older than
+// bodyweightResetAt are hidden (and deleted in the background).
+async function hideArchived(uid, entries) {
+  const { bodyweight } = await getResetBoundaries(uid);
+  return bodyweight ? entries.filter((e) => !isArchivedMeasurement(e, bodyweight)) : entries;
+}
 
 const measurementsCol = (uid) => collection(db, 'users', uid, 'measurements');
 
@@ -46,7 +55,7 @@ export async function getLatestBodyweight(uid) {
   const snap = await getDocsSafe(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  return (await hideArchived(uid, [{ id: d.id, ...d.data() }]))[0] ?? null;
 }
 
 /**
@@ -68,5 +77,5 @@ export async function listBodyweightHistory(uid, max = 50) {
     limit(max),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return hideArchived(uid, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 }

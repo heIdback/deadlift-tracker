@@ -9,6 +9,7 @@ import {
 } from './services/trainingGenerationService.js';
 import { getUserProfile } from './services/userService.js';
 import { clearLocalActiveWorkoutMarker } from './services/workoutService.js';
+import { onTrainingResetApplied } from './services/trainingResetService.js';
 
 // v1.1: tab title from APP_META (index.html carries the same static text
 // for the moment before this module runs).
@@ -72,18 +73,41 @@ async function maybeStartTrainingGeneration() {
 // This device holds pre-reset state: training writes are already refused
 // (and the server rejects any that were queued). Drop the local workout
 // marker and reload from the server into the clean, reset state.
-onTrainingGenerationStale(({ uid }) => {
-  clearLocalActiveWorkoutMarker(uid);
+function showResetNotice(text) {
+  document.getElementById('stale-reset-notice')?.remove();
   const notice = document.createElement('div');
   notice.className = 'update-banner';
   notice.id = 'stale-reset-notice';
   notice.setAttribute('role', 'status');
-  notice.textContent = 'Your training data was reset by an admin. Loading your fresh start…';
+  notice.textContent = text;
   document.body.appendChild(notice);
+  return notice;
+}
+let reloading = false;
+function reloadIntoResetState(uid) {
+  if (reloading) return;
+  reloading = true;
+  clearLocalActiveWorkoutMarker(uid);
+  showResetNotice('Your training data was reset by an admin. Loading your fresh start…');
   setTimeout(() => {
     history.replaceState(null, '', '#/home');
     location.reload();
   }, 1500);
+}
+onTrainingGenerationStale(({ uid }) => reloadIntoResetState(uid));
+
+// A reset applied by THIS app (Spark admin reset, services/trainingResetService.js):
+// at sign-in it runs before the app is shown → just say so; while the app is
+// already running (e.g. an admin resetting their own account) → reload.
+onTrainingResetApplied(() => {
+  const uid = latestUser?.uid;
+  clearLocalActiveWorkoutMarker(uid);
+  if (generationUid) {
+    reloadIntoResetState(uid);
+  } else {
+    const notice = showResetNotice('Your training data was reset by an admin. Enter your current 1RMs to start fresh.');
+    setTimeout(() => notice.remove(), 8000);
+  }
 });
 
 startRouter();

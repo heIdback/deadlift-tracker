@@ -50,14 +50,16 @@
 // already marked immutable/unchanged), never duplicated.
 // ─────────────────────────────────────────────────────────────────────────
 import {
-  doc, getDocs, collection, writeBatch, updateDoc, Timestamp,
+  doc, getDoc, getDocs, collection, writeBatch, updateDoc, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
 import { clearLocalActiveWorkoutMarker } from './workoutService.js';
 import {
-  validateBackupShape, summarizeBackup, planRestore, flattenPlanToOperations, chunkOperations,
+  validateBackupShape, summarizeBackup, planRestore, flattenPlanToOperations, chunkOperations, isBackupBeforeReset,
 } from '../utils/restorePlan.js';
+import { assertTrainingStateWritable } from './trainingGenerationService.js';
+import { toMillis } from '../utils/trainingReset.js';
 
 // Comfortably under Firestore's 500-operation-per-batch hard limit, so a
 // single unexpectedly large collection never risks tripping it.
@@ -187,6 +189,14 @@ function docRefFor(uid, op) {
  */
 export async function restoreUserData(currentUser, backup) {
   const uid = currentUser.uid;
+  // v22: never from a device holding pre-reset state, never a pre-reset backup
+  // (the reset date is read from the server, not a possibly stale cache).
+  assertTrainingStateWritable(uid);
+  const profileSnap = await getDoc(doc(db, 'users', uid));
+  const resetAt = profileSnap.exists() ? profileSnap.data().trainingResetAt : null;
+  if (isBackupBeforeReset(backup, toMillis(resetAt))) {
+    throw new Error('This backup was made before your training data was reset, so it can\'t be restored. Use a backup made after the reset.');
+  }
 
   const existing = await fetchExistingState(uid);
   const plan = planRestore({ backup, existing });

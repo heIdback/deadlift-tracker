@@ -7,7 +7,7 @@
 // anyone who isn't an approved admin, regardless of what the frontend
 // shows or hides.
 import { getCurrentUser } from '../core/auth.js';
-import { listAccessRecords, approveUser, disableUser } from '../services/accessAdminService.js';
+import { listAccessRecords, approveUser, disableUser, getAccessRecord } from '../services/accessAdminService.js';
 import { getFitnessSummariesForApprovedUsers } from '../services/adminInsightsService.js';
 import { computeUserCounts, computeTrainingStats } from '../utils/adminStats.js';
 import { formatDate } from '../utils/dates.js';
@@ -88,6 +88,27 @@ function personRow(record, { showApprove, disableLabel, isSelf, summary }) {
     </div>`;
 }
 
+/**
+ * "Reset training data" for the admin's OWN account. The list above only shows
+ * access records that have a `requestedAt` (it is ordered by it), so an admin
+ * whose access record was created by hand never appears in it and had no way
+ * to reach their own detail screen — this panel is always here instead.
+ * Applied immediately (adminResetService → trainingResetService, as the owner;
+ * no /access write, so a hand-made record works).
+ */
+async function mountOwnReset(root, uid, reload) {
+  const slot = root.querySelector('#admin-self-reset-slot');
+  if (!slot) return;
+  try {
+    const access = (await getAccessRecord(uid)) ?? { uid };
+    const { mountResetPanel } = await import('./adminReset.js');
+    mountResetPanel(slot, { targetUid: uid, access, onReload: reload });
+  } catch (err) {
+    console.warn('admin: own reset panel unavailable', err);
+    slot.innerHTML = '<p class="text-muted">Reset training data is unavailable right now (needs a connection).</p>';
+  }
+}
+
 async function mountDashboardAndList(root, uid) {
   root.innerHTML = `<div class="loading-state" role="status">Loading admin…</div>`;
 
@@ -123,10 +144,14 @@ async function mountDashboardAndList(root, uid) {
           ? disabled.map((r) => personRow(r, { showApprove: true, disableLabel: null, isSelf: r.id === uid })).join('')
           : '<p class="text-muted">No disabled users.</p>'}
 
+        <h3>Your account</h3>
+        <div id="admin-self-reset-slot"></div>
+
         <p class="form-status" id="admin-status" role="status"></p>
       </section>`;
 
     wireAvatarFallbacks(root);
+    mountOwnReset(root, uid, loadAndRender);
 
     root.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {

@@ -54,6 +54,8 @@ import { db } from '../core/firebase.js';
 import { APP_META } from '../../config/app.config.js';
 import { serializeForExport, serializeDoc, serializeDocs } from '../utils/exportSerialize.js';
 import { isGenerationSentinelId } from '../utils/trainingGeneration.js';
+import { isArchivedWorkout, isArchivedMax, isArchivedMeasurement } from '../utils/trainingReset.js';
+import { getResetBoundaries } from './trainingResetService.js';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -100,7 +102,14 @@ async function fetchAccountRecord(uid) {
 
 async function fetchProfile(uid) {
   const snap = await getDoc(doc(db, 'users', uid));
-  return snap.exists() ? serializeForExport(snap.data()) : null;
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  // v22: the reset audit's requesting-admin uid is not the user's data (same reason approvedBy is never exported).
+  if (data.trainingReset) {
+    const { requestedBy, ...audit } = data.trainingReset;
+    data.trainingReset = audit;
+  }
+  return serializeForExport(data);
 }
 
 async function fetchProgramsWithDays(uid) {
@@ -126,6 +135,15 @@ async function fetchProgramsWithDays(uid) {
  */
 export async function buildUserDataExport(currentUser) {
   const uid = currentUser.uid;
+  // v22: a backup holds the CURRENT training period only — records from
+  // before an admin reset are archived (kept in Firestore because the rules
+  // forbid deleting them) and are left out, like everywhere else in the app.
+  const { training, bodyweight } = await getResetBoundaries(uid);
+  const keep = {
+    workouts: (d) => !isArchivedWorkout(d.data(), training),
+    maxes: (d) => !isArchivedMax(d.data(), training),
+    measurements: (d) => !isArchivedMeasurement(d.data(), bodyweight),
+  };
 
   const [account, profile, programs, ...subcollections] = await Promise.all([
     fetchAccountRecord(uid),
@@ -134,7 +152,7 @@ export async function buildUserDataExport(currentUser) {
     // v22: the admin-reset generation sentinel is device-sync bookkeeping,
     // not user data — never exported (so a restore can't bring an old one back).
     ...USER_SUBCOLLECTIONS.map((name) => getDocs(userSubcollectionRef(uid, name))
-      .then(serializeDocs).then((docs) => docs.filter((d) => !isGenerationSentinelId(d.id)))),
+      .then((snap) => serializeDocs({ docs: snap.docs.filter((d) => !isGenerationSentinelId(d.id) && (keep[name]?.(d) ?? true)) }))),
   ]);
 
   const bySubcollection = Object.fromEntries(

@@ -1442,54 +1442,103 @@ it exactly as stored.
 - Home shows "Week N / <the program's own number of weeks>" (was a
   hard-coded "/ 8").
 
-### Admin → Reset training data (Cloud Function)
-Admin → open a user → **Reset training data…**. Firestore rules give admins
-read-only access to other users and are **unchanged**, so the reset runs on the
-server: callable function `adminResetUserFitness` (`functions/`, Admin SDK).
+### Choose another day (skip ahead)
+Workout → Start preview → **Choose another day…**. The program order stays
+fixed by default; when several sessions have to be missed, pick a later day
+instead of pressing Skip once per day. The panel lists exactly which sessions
+will be skipped (the current day first, then every one before the target), has
+an optional reason, and says it can't be undone.
 
-- **Server checks:** signed in; caller's `/access` doc is `approved` + `admin`
-  (never a client-sent role); target uid well-formed and has an `/access` doc;
-  payload is exactly `{targetUid, confirmation}`; `confirmation` equals
-  `RESET <target email>` (or `RESET <uid>` with no email). A per-target lock
-  (`adminResets/{uid}`) refuses a second concurrent reset.
-- **Removed:** all workouts (any status), `maxes` (1RM history), `measurements`,
-  `records`, `progressionSuggestions`, all `programRuns`; profile
-  `currentMaxes` → `{}` (the user re-enters the 4 required 1RMs at next sign-in,
-  exactly like a new account; import-time 1RMs are never used).
-- **Kept:** Auth user, `/access` (status/role), profile identity/settings/
-  training profile, every program incl. imported ones, nutrition, global config.
-- **Program:** the active program stays active as a new run
-  `reset-run-<generation>` at Week 1 / first day. No active program → none is started.
-- **Not atomic** (Firestore batches ≤ 500 writes). Deletes go in bounded batches;
-  the profile/program step is last; the server re-verifies that everything is
-  empty before reporting success. Any failure → "did NOT complete"; running it
-  again is idempotent and finishes the job. Each run writes `adminAudit/{id}`
-  (admin uid, target uid, time, result, counts — no secrets).
+- **Forward only**, up to the end of next week (never past the program's last
+  week, at most 14 sessions). One position pointer per run means a day can't be
+  logged twice.
+- Each skipped session is saved to History as a normal explicit **Skipped**
+  workout (same planned snapshot, status `completed`, `explicitSkip: true`),
+  with the **same optional reason on every one**; the run moves to the chosen
+  day — all in **one atomic, offline-safe batch** (`skipAheadToPosition` in
+  `js/services/workoutService.js`, planning in `js/utils/skipAhead.js`).
+- Needs **no rules or index change** (an owner may create a `completed`
+  workout and update their own run) and goes through the same stale-device
+  guard as every other training write.
+- **No undo.** Skipped sessions are permanent records (the rules forbid editing
+  or deleting them). Refused while a workout is in progress.
+- Limit (same as starting a workout): a batch can't check the run's server
+  state, so two devices acting at the same moment could each apply a jump.
 
-**Stale devices (open tab, offline phone, cached app).** Every successful
-reset gives the user a new *training generation*: `users/{uid}.trainingGeneration`
-(random token) plus a sentinel doc
-`users/{uid}/progressionSuggestions/__training-generation-<token>`, swapped in
-the reset's final batch. Every client write of training state — Start,
-autosave, Finish, Skip, set/RPE corrections, current-1RM saves, bodyweight,
-program-run position/switch — is committed as a batch that also `update()`s
-the device's own generation sentinel (`js/services/trainingGenerationService.js`).
-After a reset that sentinel is gone, so **Firestore rejects the whole batch on
-the server**, including writes queued offline and replayed later or after a
-refresh. The device then checks the generation (on boot, reconnect, tab focus,
-navigation, or any rejected write), refuses further training writes, shows
-"Your training data was reset by an admin. Loading your fresh start…", drops
-its local workout marker and reloads from the server. No rules change.
-Backups never include sentinels; restore never deletes or recreates one.
-Known residual: a device whose *only* session on this version was offline has
-no confirmed sentinel yet; until it has been online once, its queued 1RM and
-bodyweight writes are unguarded (workout and run writes are still rejected,
-because the reset deleted their documents).
+### Admin → Reset training data (Spark/free plan — no Cloud Functions)
+Admin → open a user → **Reset training data…** (two confirmations; type
+`RESET <email>`; **RESET USER DATA**). Firestore rules are **unchanged**: an
+admin can only *read* another user's data and can only *write* that user's
+`/access/{uid}` record. So the reset works in two steps, entirely on the free
+plan:
 
-**Deploy (new, separate step — the hosting workflow is unchanged):** requires
-the Blaze plan. Once: `cd functions && npm install`. Then, when the function
-changes: `firebase deploy --only functions`. Hosting still deploys with
-`firebase deploy --only hosting:production`.
+1. **Admin's app** writes a request to `access/{uid}.trainingResetRequest`
+   (id, requesting admin, time, typed confirmation, optional
+   "also delete bodyweight log"). The rules guarantee only an approved admin
+   can write it. Pending requests can be cancelled.
+2. **The user's own app** applies it the next time it is opened online (sign-in
+   runs it before the 1RM onboarding check; an open app picks it up on the next
+   generation check). An admin resetting their own account gets it immediately.
+   It re-checks the request (approved account, requester = `approvedBy`, exact
+   `RESET <email>`, not applied yet) and applies it in **one transaction**:
+   - deletes all program runs, any in-progress workout, `records`,
+     `progressionSuggestions`;
+   - the active program stays active as a new run `reset-run-<generation>` at
+     Week 1 / first day (no active program → none is started);
+   - profile: `currentMaxes` → `{}` (onboarding asks for Deadlift, Back Squat,
+     RDL, Bench again; import-time 1RMs are never used), a new
+     `trainingGeneration`, `trainingResetAt` (server time), and
+     `trainingReset` (audit: request id, admin, times, counts).
+
+**Your own account (admin).** Admin page → bottom section **Your account** →
+Reset training data…. (The user list above only shows access records that have
+a `requestedAt`, so an admin whose access record was made by hand isn't in it.)
+Applied immediately, no request needed.
+
+**Archived, not deleted.** The rules forbid deleting completed workouts and
+1RM history for everyone, so they stay stored but every screen, Home counter,
+History, Progress/PR analytics, the admin's view and backups hide anything
+older than `trainingResetAt`. The bodyweight log is kept unless the admin ticked
+the option; then it is hidden by `bodyweightResetAt` and deleted in the
+background. A backup made before the reset can't be restored (it would bring
+back the old program position and 1RMs); backups made after it restore normally.
+
+**Kept:** Auth user, access status/role, profile identity, settings, training
+profile, every program (incl. imported), nutrition.
+
+**Limits of the free-plan design:** the reset is applied by the user's own app,
+so it waits until they next open the app online (a device still on an old
+version applies it after updating), and a modified app could skip it (it only
+affects that user's own data). Changing `approvedBy` to the requesting admin
+is required by the access rule.
+
+**Stale devices (open tab, offline phone, cached app).** Every reset gives the
+user a new *training generation*: `users/{uid}.trainingGeneration` plus a
+sentinel doc `users/{uid}/progressionSuggestions/__training-generation-<token>`,
+swapped in the reset transaction. Every client write of training state —
+Start, autosave, Finish, Skip, set/RPE corrections, current-1RM saves,
+bodyweight, program-run position/switch — is committed as a batch that also
+`update()`s the device's own sentinel (`js/services/trainingGenerationService.js`).
+After a reset that sentinel is gone, so **Firestore rejects the whole batch**,
+including writes queued offline. The device then reloads into the reset state
+("Your training data was reset by an admin…"). Backups never include sentinels;
+restore never deletes or recreates one. Known residual: a device whose *only*
+session on this version was offline has no confirmed sentinel yet; until it has
+been online once, its queued 1RM and bodyweight writes are unguarded.
+
+**Deploy:** hosting only — double-click `deploy.cmd` (see "Deploying" below) or
+run `firebase deploy --only hosting:production`. No Functions, no Blaze.
+
+### Deploying (one click, Windows)
+Double-click **`deploy.cmd`** in the project folder. It checks the setup
+(branch `main`, no `functions/` folder, required files, correct `/import`
+route), shows what changed, asks for a short description and a final `y`,
+then runs `git add -A`, `git commit`, `git push origin main` and
+`firebase deploy --only hosting:production`. It stops at the first failed
+step and says so. Hosting only — no Functions, no rules, free plan.
+One-time setup: Git signed in to GitHub, `npm install -g firebase-tools`,
+`firebase login`. `deploy.cmd` and `tests/` are excluded from Hosting
+(`firebase.json` → `hosting.ignore`).
 
 ### Tests
 See `tests/README.md`. `tests/rules/` needs the Firebase emulator (Java +

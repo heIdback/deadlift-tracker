@@ -9,6 +9,8 @@ import { isOfflineUnavailableError } from '../utils/offlineError.js';
 import { DEFAULTS, APP_META } from '../../config/app.config.js';
 import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 import { commitTrainingBatch } from './trainingGenerationService.js';
+import { getResetBoundaries } from './trainingResetService.js';
+import { isArchivedMax } from '../utils/trainingReset.js';
 
 const userDocRef = (uid) => doc(db, 'users', uid);
 const maxesColRef = (uid) => collection(db, 'users', uid, 'maxes');
@@ -136,7 +138,8 @@ export async function getMaxHistory(uid, exerciseId, max = 20) {
     limit(max),
   );
   const snap = await getDocs(q);
+  const { training } = await getResetBoundaries(uid); // v22: hide 1RM history from before an admin reset
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((d) => d.exerciseId === exerciseId);
+    .filter((d) => d.exerciseId === exerciseId && !isArchivedMax(d, training));
 }

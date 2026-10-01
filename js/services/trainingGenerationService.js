@@ -29,6 +29,7 @@ import { db } from '../core/firebase.js';
 import {
   GENERATION_SENTINEL_COLLECTION, generationSentinelId, generationOf,
 } from '../utils/trainingGeneration.js';
+import { applyPendingTrainingReset } from './trainingResetService.js';
 
 const VERIFY_THROTTLE_MS = 60 * 1000;
 
@@ -125,6 +126,13 @@ async function runVerify(reason) {
   if (outcome === 'ok' || outcome === 'created') {
     state.guarded = true;
     getDocFromServer(sentinelRef(uid, generation)).catch(() => {}); // cache it: the guard must survive an offline refresh
+    // An admin may have requested a reset while this app is open: apply it
+    // here (this device then holds pre-reset state → reload like any stale device).
+    const reset = await applyPendingTrainingReset(uid).catch(() => ({ state: 'error' }));
+    if (reset.state === 'applied') {
+      markStale('reset-applied');
+      return 'stale';
+    }
   }
   return outcome;
 }
