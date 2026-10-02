@@ -11,6 +11,9 @@ import { escapeHtml } from '../utils/dom.js';
 // v1.1: week count from the program's own `weeks` (an imported program need
 // not be 8 weeks long) — the same helper Program view already uses.
 import { totalWeeksOf } from '../utils/programEditModel.js';
+import {
+  loadHomeInsights, suggestionsHtml, goalCardHtml, wireInsights,
+} from './homeInsights.js';
 
 export async function mount(root) {
   const uid = getCurrentUser().uid;
@@ -79,6 +82,15 @@ export async function mount(root) {
   // for whoever happens to be viewing this dashboard.
   const dlMax = profile?.currentMaxes?.deadlift?.kg ?? null;
 
+  // v26: optional extras (suggested new 1RM + goal card). Advisory only — if
+  // anything goes wrong reading history, Home renders exactly as before.
+  let insights = null;
+  try {
+    insights = await loadHomeInsights({ uid, profile, program, week: weekOfEight });
+  } catch (err) {
+    console.warn('[HOME] insights unavailable', err);
+  }
+
   root.innerHTML = `
     <section class="dashboard">
       <div class="card card-primary">
@@ -95,6 +107,8 @@ export async function mount(root) {
         </button>
         <p class="form-status" id="start-status" role="status"></p>
       </div>
+
+      ${insights ? suggestionsHtml(insights.suggestions) : ''}
 
       <div class="stat-grid">
         <div class="stat-card">
@@ -115,6 +129,8 @@ export async function mount(root) {
         </div>
       </div>
 
+      ${insights ? goalCardHtml(insights.goal) : ''}
+
       ${program.importReviewFlags?.length ? `
         <div class="card card-notice">
           <div class="card-label">Import needs your review</div>
@@ -125,6 +141,15 @@ export async function mount(root) {
         </div>` : ''}
     </section>
   `;
+
+  if (insights) {
+    try {
+      wireInsights(root, { uid, insights, onChanged: () => mount(root) });
+    } catch (err) {
+      // Never let the optional cards stop the START WORKOUT button below from working.
+      console.error('[HOME] insights wiring failed', err);
+    }
+  }
 
   root.querySelector('#start-workout-btn').addEventListener('click', async (e) => {
     const btn = e.target;

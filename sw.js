@@ -384,6 +384,11 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
+// v26 — Workout note (Workout + History), "Suggested new 1RM" and goal card on
+// Home. NEW statically imported modules js/utils/oneRmSuggestion.js,
+// js/utils/liftGoal.js and js/views/homeInsights.js are listed below;
+// userService.js, workoutService.js and views/{workout,history,home}.js
+// changed, so the shell cache name changes too.
 // v25 — Admin page: "Your account" → Reset training data for the admin's OWN
 // account (js/views/admin.js changed; no new module). Cache bump only, so an
 // installed v24 browser re-fetches it (cache-first never re-checks a hit).
@@ -392,7 +397,7 @@
 // js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
 // + views/workout.js) and is listed below; workoutService.js and
 // views/workout.js changed, so the shell cache name changes too.
-const CACHE_VERSION = 'v25';
+const CACHE_VERSION = 'v26';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -441,7 +446,9 @@ const SHELL_MODULES = [
   'js/utils/exportFlatten.js',
   'js/utils/exportSerialize.js',
   'js/utils/firestoreRead.js',
+  'js/utils/liftGoal.js',
   'js/utils/maxHistoryAnalytics.js',
+  'js/utils/oneRmSuggestion.js',
   'js/utils/offlineError.js',
   'js/utils/programDisplay.js',
   'js/utils/programEditModel.js',
@@ -466,6 +473,7 @@ const SHELL_MODULES = [
   'js/views/disabled.js',
   'js/views/history.js',
   'js/views/home.js',
+  'js/views/homeInsights.js',
   'js/views/login.js',
   'js/views/notFound.js',
   'js/views/nutrition.js',

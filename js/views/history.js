@@ -222,6 +222,18 @@ function skipReasonHtml(workout, { compact }) {
 }
 
 /**
+ * v26: the lifter's own free-text note for the whole workout (written on the
+ * Workout screen while training; read-only here because firestore.rules pins
+ * `notes` once a workout is completed). Shown only when there is one — a
+ * skipped workout never has a note, and `skipReason` is rendered separately.
+ */
+function workoutNoteHtml(workout) {
+  const text = typeof workout.notes === 'string' ? workout.notes.trim() : '';
+  if (!text) return '';
+  return `<div class="card workout-note-view"><div class="card-label">Workout note</div><p class="workout-note-text">${escapeHtml(text)}</p></div>`;
+}
+
+/**
  * Correction pass (CORRECTION 3) — the workout timing line, in Europe/
  * Zagreb local time via Intl.DateTimeFormat (never a hardcoded "CET", which
  * would be wrong for half the year — see js/utils/dates.js). A Skipped
@@ -329,6 +341,7 @@ function renderWorkoutDetail(root, uid, workout, completedForPr = null) {
       <p class="text-muted">Week ${escapeHtml(workout.week)}</p>
       <p class="text-muted">${timingLineHtml(workout, { compact: false })}</p>
       ${skipReasonHtml(workout, { compact: false })}
+      ${workoutNoteHtml(workout)}
       ${prDetailListHtml(prEvents, workout)}
       ${editable ? '<button type="button" class="btn btn-secondary" id="edit-workout-btn">Edit Workout</button>' : ''}
       <div id="detail-body">

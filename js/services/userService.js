@@ -1,5 +1,5 @@
 import {
-  doc, getDoc, setDoc, updateDoc, serverTimestamp,
+  doc, getDoc, setDoc, updateDoc, serverTimestamp, deleteField,
   collection, query, orderBy, limit, getDocs, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
@@ -11,6 +11,7 @@ import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 import { commitTrainingBatch } from './trainingGenerationService.js';
 import { getResetBoundaries } from './trainingResetService.js';
 import { isArchivedMax } from '../utils/trainingReset.js';
+import { normalizeGoalKg } from '../utils/liftGoal.js';
 
 const userDocRef = (uid) => doc(db, 'users', uid);
 const maxesColRef = (uid) => collection(db, 'users', uid, 'maxes');
@@ -86,6 +87,25 @@ export async function updateSettings(uid, settingsPatch) {
 
 export async function updateTrainingProfile(uid, patch) {
   await trackWrite(() => updateDoc(userDocRef(uid), { trainingProfile: patch }));
+}
+
+/**
+ * v26: set (or clear, with kg = null) the lifter's goal for one lift, stored
+ * as `goals.<exerciseId>` on the user document. Display-only — nothing reads
+ * it except the Home goal card. Touches only that one field path, so it can
+ * never disturb settings, currentMaxes or anything else on the profile.
+ */
+export async function setLiftGoal(uid, exerciseId, kg) {
+  if (!exerciseId || typeof exerciseId !== 'string') throw new Error('setLiftGoal requires an exerciseId.');
+  const field = `goals.${exerciseId}`;
+  if (kg == null) {
+    await trackWrite(() => updateDoc(userDocRef(uid), { [field]: deleteField() }));
+    return null;
+  }
+  const goalKg = normalizeGoalKg(kg);
+  if (goalKg == null) throw new Error('Enter a goal between 20 and 500 kg.');
+  await trackWrite(() => updateDoc(userDocRef(uid), { [field]: goalKg }));
+  return goalKg;
 }
 
 /**

@@ -9,7 +9,7 @@ import { getPrimaryProgramContext, getProgramDays, startProgramRun } from '../se
 import {
   resolveActiveWorkout, startOrResumeWorkoutForCurrentPosition,
   updateWorkoutExercises, subscribeToWorkoutLocalStatus, finishWorkout, skipWorkout, reconcileLegacyProgramPosition,
-  skipAheadToPosition,
+  skipAheadToPosition, updateWorkoutNote, MAX_WORKOUT_NOTE_LENGTH,
 } from '../services/workoutService.js';
 import { listSkipTargets, MAX_SKIP_REASON_LENGTH } from '../utils/skipAhead.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
@@ -400,6 +400,12 @@ function renderWorkoutHtml(workout) {
         <div class="card-sub">Tap ✓ once you've done a set. Change the weight or reps if you did something different, or tap ⋯ to mark a set failed or skipped. Everything saves automatically.</div>
       </div>
       ${workout.exercises.map(renderExerciseBlock).join('')}
+      <div class="card" id="workout-note-card">
+        <label class="field">Workout note (optional)
+          <textarea id="workout-note-input" rows="3" maxlength="${MAX_WORKOUT_NOTE_LENGTH}" placeholder="How did it feel? Anything to remember for next time?">${escapeHtml(workout.notes ?? '')}</textarea>
+        </label>
+        <p class="text-muted">Saved with this workout. It can't be changed after you finish.</p>
+      </div>
       <div class="card" id="finish-panel">
         <button type="button" class="btn btn-primary btn-large" id="finish-btn">FINISH WORKOUT</button>
         <p class="form-status" id="finish-status" role="status"></p>
@@ -436,6 +442,9 @@ function mountActiveWorkout(root, uid, workoutInput) {
   const workout = { ...workoutInput, exercises };
 
   let dirty = false;
+  // v26: the workout-level note is saved by the same debounce/flush machinery
+  // as the sets, but as its own write (a different field of the same doc).
+  let noteDirty = false;
   let debounceTimer = null;
   // A resolved-promise-based mutex: every save chains onto the previous
   // one, so saves are strictly sequential and each one always reads
@@ -492,15 +501,28 @@ function mountActiveWorkout(root, uid, workoutInput) {
    * Promise.
    */
   async function runSave() {
-    if (!dirty || workout.status !== 'in_progress') return;
+    if ((!dirty && !noteDirty) || workout.status !== 'in_progress') return;
+    const saveExercises = dirty;
+    const saveNote = noteDirty;
     dirty = false;
+    noteDirty = false;
     setAutosaveStatus('Saving…');
-    const exercisesSnapshot = workout.exercises;
-    updateWorkoutExercises(uid, workout.id, exercisesSnapshot).catch((err) => {
-      console.error(err);
-      dirty = true; // nothing is lost — the next trigger (or flush) retries
-      setAutosaveStatus(`Save failed, will retry — ${err.message}`);
-    });
+    if (saveExercises) {
+      const exercisesSnapshot = workout.exercises;
+      updateWorkoutExercises(uid, workout.id, exercisesSnapshot).catch((err) => {
+        console.error(err);
+        dirty = true; // nothing is lost — the next trigger (or flush) retries
+        setAutosaveStatus(`Save failed, will retry — ${err.message}`);
+      });
+    }
+    if (saveNote) {
+      const noteSnapshot = workout.notes ?? '';
+      updateWorkoutNote(uid, workout.id, noteSnapshot).catch((err) => {
+        console.error(err);
+        noteDirty = true;
+        setAutosaveStatus(`Save failed, will retry — ${err.message}`);
+      });
+    }
   }
 
   function triggerSave() {
@@ -509,8 +531,8 @@ function mountActiveWorkout(root, uid, workoutInput) {
     return saveChain;
   }
 
-  function queueSave(immediate) {
-    dirty = true;
+  function queueSave(immediate, { noteOnly = false } = {}) {
+    if (noteOnly) noteDirty = true; else dirty = true;
     if (debounceTimer) {
       clearTimeout(debounceTimer);
       debounceTimer = null;
@@ -569,7 +591,7 @@ function mountActiveWorkout(root, uid, workoutInput) {
     if (isFirstSnapshot && !hasPendingWrites) return;
     if (hasPendingWrites) {
       setAutosaveStatus(navigator.onLine ? 'Saved — syncing…' : 'Saved locally — will sync when back online');
-    } else if (!dirty && !debounceTimer) {
+    } else if (!dirty && !noteDirty && !debounceTimer) {
       // No pending local write and nothing queued right now: the backend
       // has genuinely acknowledged the last edit.
       setAutosaveStatus('Saved');
@@ -633,6 +655,11 @@ function mountActiveWorkout(root, uid, workoutInput) {
       // Typing gets the debounced save; taps (✓ / Failed / Skip) get prompt
       // persistence — same cadence split as before v1.1.
       wireSetBlock(blockEl, set, (kind) => queueSave(kind === 'action'));
+    });
+
+    root.querySelector('#workout-note-input')?.addEventListener('input', (e) => {
+      workout.notes = e.target.value.slice(0, MAX_WORKOUT_NOTE_LENGTH);
+      queueSave(false, { noteOnly: true });
     });
 
     root.querySelector('#finish-btn')?.addEventListener('click', onFinish);

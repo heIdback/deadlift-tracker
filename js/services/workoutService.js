@@ -560,6 +560,26 @@ export async function updateWorkoutExercises(uid, workoutId, exercises) {
 }
 
 /**
+ * v26: save the lifter's free-text note for the WHOLE workout (the `notes`
+ * field every workout document already carries, empty until now). Only ever
+ * called for an in-progress workout: firestore.rules lets `notes` change
+ * while a workout is in progress (and on the finishing write) but pins it
+ * once the workout is completed, so there is no "edit the note later" path —
+ * by design, nothing here needed a rules change. Same one-write-per-call,
+ * generation-guarded shape as updateWorkoutExercises above.
+ */
+export const MAX_WORKOUT_NOTE_LENGTH = 1000;
+
+export async function updateWorkoutNote(uid, workoutId, notes) {
+  const text = String(notes ?? '').slice(0, MAX_WORKOUT_NOTE_LENGTH);
+  return trackWrite(() => {
+    const batch = writeBatch(db);
+    batch.update(workoutDocRef(uid, workoutId), { notes: text });
+    return commitTrainingBatch(uid, batch);
+  });
+}
+
+/**
  * Correction pass 5 — the piece Correction pass 4 got wrong. Verified
  * directly (not assumed) against real, current reports from the
  * firebase-js-sdk issue tracker (see this pass's report for citations):

@@ -559,3 +559,14 @@
 /* Admin reset: optional "also delete bodyweight log" choice. */
 .reset-option { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-2) 0; overflow-wrap: anywhere; }
 .reset-option input { flex: none; width: 22px; height: 22px; margin-top: 2px; }
+/* v26 — workout note (Workout + History), Home goal card, suggested-1RM card. */
+#workout-note-input { width: 100%; min-height: 80px; padding: var(--space-2); resize: vertical; font: inherit; }
+.workout-note-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.goal-headline { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: var(--space-2); }
+.goal-bar { height: 10px; border-radius: 5px; background: var(--surface-raised); border: 1px solid var(--border); overflow: hidden; margin-bottom: var(--space-2); }
+.goal-bar-fill { height: 100%; background: var(--accent); border-radius: 5px; }
+.goal-remaining { font-weight: 600; margin: 0 0 var(--space-2); }
+.goal-form input { min-height: 44px; padding: 0 var(--space-2); }
+.goal-card .btn-stack, .one-rm-suggestion .btn-stack { margin-top: var(--space-2); }
+.goal-card p, .one-rm-suggestion p { overflow-wrap: anywhere; }
+#workout-note-card .text-muted { margin: var(--space-2) 0 0; }
