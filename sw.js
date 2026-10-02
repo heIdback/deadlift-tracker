@@ -384,6 +384,10 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
+// v27 — "Export for analysis" card on Profile. NEW statically imported modules
+// js/utils/analysisExport.js, js/services/analysisExportService.js and
+// js/views/analysisExportCard.js are listed below; views/profile.js and
+// css/views.css changed, so the shell cache name changes too.
 // v26 — Workout note (Workout + History), "Suggested new 1RM" and goal card on
 // Home. NEW statically imported modules js/utils/oneRmSuggestion.js,
 // js/utils/liftGoal.js and js/views/homeInsights.js are listed below;
@@ -397,7 +401,7 @@
 // js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
 // + views/workout.js) and is listed below; workoutService.js and
 // views/workout.js changed, so the shell cache name changes too.
-const CACHE_VERSION = 'v26';
+const CACHE_VERSION = 'v27';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -426,6 +430,7 @@ const SHELL_MODULES = [
   'js/services/accessAdminService.js',
   'js/services/adminInsightsService.js',
   'js/services/adminResetService.js',
+  'js/services/analysisExportService.js',
   'js/services/exportService.js',
   'js/services/measurementService.js',
   'js/services/programEditService.js',
@@ -437,6 +442,7 @@ const SHELL_MODULES = [
   'js/services/userService.js',
   'js/services/workoutService.js',
   'js/utils/adminStats.js',
+  'js/utils/analysisExport.js',
   'js/utils/calculations.js',
   'js/utils/csv.js',
   'js/utils/dates.js',
@@ -470,6 +476,7 @@ const SHELL_MODULES = [
   'js/views/admin.js',
   'js/views/adminReset.js',
   'js/views/adminUserDetail.js',
+  'js/views/analysisExportCard.js',
   'js/views/disabled.js',
   'js/views/history.js',
   'js/views/home.js',

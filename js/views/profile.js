@@ -18,6 +18,7 @@ import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 import { escapeHtml, safeUrl } from '../utils/dom.js';
 import { formatDate } from '../utils/dates.js';
 import { APP_META } from '../../config/app.config.js';
+import { analysisCardHtml, wireAnalysisCard } from './analysisExportCard.js';
 
 const WORKOUT_CSV_COLUMNS = [
   { key: 'workoutId', header: 'workoutId' },
@@ -185,6 +186,8 @@ export async function mount(root) {
         `}
       </div>
 
+      ${analysisCardHtml(profile)}
+
       <div class="card">
         <h3>Backup &amp; Data</h3>
         <p class="text-muted">
@@ -254,6 +257,9 @@ export async function mount(root) {
       status.textContent = `Error: ${err.message}`;
     }
   });
+
+  // v27: Export for analysis card — its own failure must never break Profile.
+  try { wireAnalysisCard(root, { uid, profile }); } catch (err) { console.error('[PROFILE] analysis card', err); }
 
   // ── Backup & Data exports (Phase 3D, wording/scope updated Phase 3E) ──
   // All four buttons share one small pattern: disable while working, show

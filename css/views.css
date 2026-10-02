@@ -570,3 +570,11 @@
 .goal-card .btn-stack, .one-rm-suggestion .btn-stack { margin-top: var(--space-2); }
 .goal-card p, .one-rm-suggestion p { overflow-wrap: anywhere; }
 #workout-note-card .text-muted { margin: var(--space-2) 0 0; }
+/* v27 — Profile: Export for analysis card. */
+.analysis-range { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.analysis-option { display: flex; gap: var(--space-2); align-items: center; min-height: 44px; }
+.analysis-option input { flex: none; width: 22px; height: 22px; }
+#analysis-card p, #analysis-card .card-notice { overflow-wrap: anywhere; }
+#analysis-result { margin-top: var(--space-3); }
+#analysis-result .btn-stack { margin-top: var(--space-2); }
+.analysis-prompt-text { width: 100%; margin-top: var(--space-2); padding: var(--space-2); font: inherit; }
