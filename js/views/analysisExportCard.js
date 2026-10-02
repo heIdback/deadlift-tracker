@@ -125,20 +125,37 @@ export function wireAnalysisCard(root, { uid, profile }) {
       noteExported('Downloaded.');
     });
     result.querySelector('#analysis-copy-btn').addEventListener('click', copyPrompt);
-    result.querySelector('#analysis-share-btn')?.addEventListener('click', async () => {
+    // Share. Phones differ in what they let a web page hand to another app, so
+    // the file goes out as plain text (.txt) — the one type every share sheet
+    // accepts — and if that is still refused, a second button shares the same
+    // content as message text instead. Download always works as the last resort.
+    const SHARE_TITLE = 'Deadlift Tracker — analysis export';
+    async function runShare(payload, doneMessage) {
       try {
-        await navigator.share({
-          files: [p.file],
-          title: 'Deadlift Tracker — analysis export',
-          text: ANALYSIS_PROMPT,
-        });
-        noteExported('Shared.');
+        await navigator.share(payload);
+        noteExported(doneMessage);
+        return true;
       } catch (err) {
-        if (err?.name === 'AbortError') { status.textContent = 'Share cancelled — nothing was marked as analysed.'; return; }
+        if (err?.name === 'AbortError') { status.textContent = 'Share cancelled — nothing was marked as analysed.'; return false; }
         console.error(err);
-        status.textContent = `Could not share: ${err.message}. Try Download instead.`;
+        status.textContent = `Could not share (${err?.name ?? 'error'}: ${err?.message ?? 'unknown'}). Try “Share as text”, or use Download.`;
+        offerTextShare();
+        return false;
       }
-    });
+    }
+    function offerTextShare() {
+      if (typeof navigator.share !== 'function' || p.bytes > 400000 || result.querySelector('#analysis-share-text-btn')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary';
+      btn.id = 'analysis-share-text-btn';
+      btn.textContent = 'Share as text';
+      btn.addEventListener('click', () => runShare({ title: SHARE_TITLE, text: `${ANALYSIS_PROMPT}\n\n${p.json}` }, 'Shared as text.'));
+      result.querySelector('.btn-stack').appendChild(btn);
+    }
+    result.querySelector('#analysis-share-btn')?.addEventListener('click', () => runShare({ files: [p.file], title: SHARE_TITLE }, 'Shared.'));
+    // Phones without file sharing at all can still share the content as text.
+    if (!p.canShare) offerTextShare();
   }
 
   prepareBtn.addEventListener('click', async () => {
@@ -155,7 +172,7 @@ export function wireAnalysisCard(root, { uid, profile }) {
       // Built now, so the later Share click starts straight away (the browser
       // only allows sharing right after a tap).
       try {
-        p.file = new File([p.json], p.filename, { type: 'application/json' });
+        p.file = new File([p.json], p.filename.replace(/\.json$/, '.txt'), { type: 'text/plain' });
         p.canShare = typeof navigator.canShare === 'function' && typeof navigator.share === 'function'
           && navigator.canShare({ files: [p.file] });
       } catch { p.canShare = false; }
