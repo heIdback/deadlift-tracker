@@ -1442,6 +1442,18 @@ it exactly as stored.
 - Home shows "Week N / <the program's own number of weeks>" (was a
   hard-coded "/ 8").
 
+### "Last time" on the active workout
+While a workout is in progress, every exercise shows where its numbers last
+came from ("Last time: <date> · Week N · <day>") and every set shows what was
+done at the same place last time ("Last: 160 kg × 6 @ RPE 8", "(failed)",
+"skipped", "not done"). Last time = the most recent finished workout (not an
+explicit Skip, not from before a training reset) in which that exercise was
+actually logged; warm-up ramps and working sets are matched separately, set by
+set in order. Read-only and loaded after the logger is shown (one History
+query, offline-safe; nothing shown if unavailable). The inputs keep this
+week's planned prefill. Code: `js/utils/previousPerformance.js`,
+`getPreviousPerformance` in `js/services/workoutService.js`.
+
 ### Choose another day (skip ahead)
 Workout → Start preview → **Choose another day…**. The program order stays
 fixed by default; when several sessions have to be missed, pick a later day

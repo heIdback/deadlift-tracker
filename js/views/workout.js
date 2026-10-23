@@ -9,7 +9,7 @@ import { getPrimaryProgramContext, getProgramDays, startProgramRun } from '../se
 import {
   resolveActiveWorkout, startOrResumeWorkoutForCurrentPosition,
   updateWorkoutExercises, subscribeToWorkoutLocalStatus, finishWorkout, skipWorkout, reconcileLegacyProgramPosition,
-  skipAheadToPosition, updateWorkoutNote, MAX_WORKOUT_NOTE_LENGTH,
+  skipAheadToPosition, updateWorkoutNote, MAX_WORKOUT_NOTE_LENGTH, getPreviousPerformance,
 } from '../services/workoutService.js';
 import { listSkipTargets, MAX_SKIP_REASON_LENGTH } from '../utils/skipAhead.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
@@ -18,6 +18,7 @@ import { setBlockHtml, wireSetBlock } from '../components/setResult.js';
 import { resolveSetStatus, SET_STATUS } from '../utils/setLogging.js';
 import { orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { escapeHtml } from '../utils/dom.js';
+import { formatDate } from '../utils/dates.js';
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
 
@@ -383,12 +384,40 @@ function renderSetRow(ex, s) {
 function renderExerciseBlock(ex) {
   const rows = (ex.sets ?? []).map((s) => renderSetRow(ex, s)).join('');
   return `
-    <div class="card exercise-card">
+    <div class="card exercise-card" data-entry-id="${escapeHtml(ex.entryId ?? '')}">
       <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
       ${targetRpeHtml(ex)}
       ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
       ${rows ? `<div class="set-table">${rows}</div>` : '<p class="text-muted">Nothing to log for this item.</p>'}
     </div>`;
+}
+
+/**
+ * v29 — adds what was done LAST TIME under each set (and where it came from
+ * under the exercise title) to the already-rendered logger. Inserted into the
+ * live DOM (the logger is rendered once and never re-rendered), as plain text.
+ * Read-only: the inputs keep their own planned prefill.
+ */
+function showPreviousPerformance(root, prev) {
+  if (!prev?.size) return;
+  root.querySelectorAll('.exercise-card[data-entry-id]').forEach((card) => {
+    const info = prev.get(card.dataset.entryId);
+    if (!info) return;
+    card.querySelectorAll('.prev-session, .set-prev').forEach((el) => el.remove());
+    const head = document.createElement('div');
+    head.className = 'card-sub prev-session';
+    head.textContent = ['Last time', formatDate(info.finishedAt), info.week != null ? `Week ${info.week}` : '', info.dayName]
+      .filter(Boolean).join(' · ').replace('Last time · ', 'Last time: ');
+    card.querySelector('.card-title')?.after(head);
+    card.querySelectorAll('.set-block[data-set-id]').forEach((block) => {
+      const text = info.sets.get(block.dataset.setId);
+      if (!text) return;
+      const line = document.createElement('div');
+      line.className = 'set-prev';
+      line.textContent = `Last: ${text}`;
+      block.querySelector('.set-row')?.after(line);
+    });
+  });
 }
 
 function renderWorkoutHtml(workout) {
@@ -633,6 +662,9 @@ function mountActiveWorkout(root, uid, workoutInput) {
 
   root.innerHTML = renderWorkoutHtml(workout);
   wireEvents();
+  // v29: "Last time" lines — loaded after the logger is already usable (never
+  // delays it; nothing shown if unavailable, e.g. offline with nothing cached).
+  getPreviousPerformance(uid, workout).then((prev) => showPreviousPerformance(root, prev));
 
   // Any exercise that needed its sets backfilled just now must be persisted
   // once, promptly — otherwise a refresh before the lifter touches anything

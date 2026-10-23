@@ -578,3 +578,15 @@
 #analysis-result { margin-top: var(--space-3); }
 #analysis-result .btn-stack { margin-top: var(--space-2); }
 .analysis-prompt-text { width: 100%; margin-top: var(--space-2); padding: var(--space-2); font: inherit; }
+
+/* v29 — "Last time" on the active workout (js/views/workout.js showPreviousPerformance). */
+.prev-session { color: var(--text-secondary); }
+.set-prev {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 0 var(--space-2) 0 calc(28px + var(--space-4));
+  overflow-wrap: anywhere;
+}
+@media (max-width: 380px) {
+  .set-prev { padding-left: calc(22px + var(--space-3)); }
+}

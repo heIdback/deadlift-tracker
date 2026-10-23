@@ -25,6 +25,8 @@ import { getResetBoundaries } from './trainingResetService.js';
 import { isArchivedWorkout, toMillis } from '../utils/trainingReset.js';
 // v23: skip ahead — jump forward in the program, logging the days in between as Skipped.
 import { planSkipAhead, orderTiesLatestPositionFirst } from '../utils/skipAhead.js';
+// v29: "Last time" next to each set on the active workout.
+import { buildPreviousPerformance, PREVIOUS_LOOKBACK } from '../utils/previousPerformance.js';
 
 async function hideArchived(uid, workouts) {
   const { training } = await getResetBoundaries(uid);
@@ -495,6 +497,24 @@ export async function listCompletedWorkouts(uid, max = 10) {
   // together (v23 skip ahead) share one server time: order those latest-position-first.
   const list = await hideArchived(uid, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   return orderTiesLatestPositionFirst(list, (w) => toMillis(w.finishedAt) ?? null);
+}
+
+/**
+ * v29 — what the lifter did LAST TIME for each exercise of `workout` (the one
+ * being logged): one read of the recent finished workouts (the same query and
+ * index as History, offline-safe via getDocsSafe; pre-reset workouts are
+ * already hidden), matched in utils/previousPerformance.js. Read-only.
+ * Never throws: on any failure (offline cache miss, …) it resolves to an
+ * empty Map and the logger simply shows no "Last" lines.
+ */
+export async function getPreviousPerformance(uid, workout) {
+  try {
+    const recent = await listCompletedWorkouts(uid, PREVIOUS_LOOKBACK);
+    return buildPreviousPerformance(workout?.exercises ?? [], recent, { excludeWorkoutId: workout?.id });
+  } catch (err) {
+    console.warn('Previous performance unavailable:', err?.code ?? err);
+    return new Map();
+  }
 }
 
 /**
