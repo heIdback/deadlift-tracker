@@ -11,7 +11,9 @@
 //
 // Every value that came from the file is rendered through escapeHtml.
 import { getCurrentUser } from '../core/auth.js';
-import { listPrograms, importProgram, ProgramIdConflictError } from '../services/programService.js';
+import { listPrograms, importProgram, ProgramIdConflictError, getActiveProgramRun } from '../services/programService.js';
+// v30: "Update existing program" (keeps the program id and its run position).
+import { previewProgramUpdate, updateProgramFromImport } from '../services/programUpdateService.js';
 import { getUserProfile } from '../services/userService.js';
 import {
   prepareProgramImport, summarizeImportPlan, withProgramId,
@@ -114,15 +116,43 @@ function summaryHtml(summary) {
     </div>`;
 }
 
+const DIFF_LABELS = { added: 'added', removed: 'removed', changed: 'changed', unchanged: 'no change' };
+
+/** v30: what "Update existing program" would do (or why it can't). Every name is escaped. */
+function updatePreviewHtml(r) {
+  if (!r.ok) {
+    return `<p class="login-error" data-update-state="${escapeHtml(r.reason)}">${escapeHtml(r.message)}</p>`;
+  }
+  const { diff } = r;
+  const run = r.guardedRuns.find((x) => x.status === 'active') ?? r.guardedRuns[0];
+  return `
+    <div data-update-state="ok">
+      <h4>What changes</h4>
+      <ul class="notice-list import-update-diff">
+        ${diff.programFields.map((f) => `<li>${escapeHtml(f)} — <strong>changed</strong></li>`).join('')}
+        ${diff.weeks.changed ? `<li>Weeks: ${diff.weeks.from} → <strong>${diff.weeks.to}</strong>${diff.weeks.from === diff.weeks.to ? ' (week details changed)' : ''}</li>` : ''}
+        ${diff.days.map((d) => `<li class="is-${d.status}">Day ${d.order}: ${escapeHtml(d.to ?? d.from ?? '')}${d.status === 'changed' && d.from && d.to && d.from !== d.to ? ` <span class="text-muted">(was ${escapeHtml(d.from)})</span>` : ''} — <strong>${DIFF_LABELS[d.status]}</strong></li>`).join('')}
+      </ul>
+      <p>${run ? `Your place stays at <strong>Week ${escapeHtml(run.current.week)} · Day ${escapeHtml(run.current.dayOrder)}</strong>${run.status === 'active' ? '' : ' (paused run)'}; the next workout you start uses the new plan.` : 'This program has no run yet — nothing about your progress changes.'}</p>
+      <p class="text-muted">Finished workouts keep the plan they were done with. Before updating, a copy of the current version is saved as
+      “${escapeHtml(r.backup.program.name)}” (not active), so the old plan is never lost. The update itself can't be undone
+      (setting the copy active later starts it from the beginning, not from your current place).</p>
+    </div>`;
+}
+
 export async function mount(root) {
   const uid = getCurrentUser().uid;
   root.innerHTML = '<div class="loading-state" role="status">Loading…</div>';
 
   let existingIds = [];
   let currentMaxes = {};
+  let programList = [];
+  let activeProgramId = null;
   try {
-    const [programs, profile] = await Promise.all([listPrograms(uid), getUserProfile(uid)]);
+    const [programs, profile, activeRun] = await Promise.all([listPrograms(uid), getUserProfile(uid), getActiveProgramRun(uid)]);
     existingIds = programs.map((p) => p.id);
+    programList = programs.map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
+    activeProgramId = activeRun?.programId ?? null;
     currentMaxes = profile?.currentMaxes ?? {};
   } catch (err) {
     console.error('programImport: could not load existing programs', err);
@@ -146,8 +176,9 @@ export async function mount(root) {
   function renderChoose(message = '') {
     body.innerHTML = `
       <div class="card">
-        <p>Add a new training program from a <strong>.json</strong> or <strong>.csv</strong> file.
-        It is added as a new program — your existing programs, workout history, 1RMs and bodyweight are never changed.</p>
+        <p>Add a new training program from a <strong>.json</strong> or <strong>.csv</strong> file — or use the file to
+        update a program you already have, keeping your place in it (you choose after the preview).
+        Your workout history, 1RMs and bodyweight are never changed.</p>
         <input type="file" id="import-file-input" accept=".json,.csv,application/json,text/csv" hidden>
         <button type="button" class="btn btn-primary" id="import-choose-btn">Choose File…</button>
         <p class="form-status" id="import-status" role="status">${escapeHtml(message)}</p>
@@ -204,12 +235,16 @@ export async function mount(root) {
   function renderPreview(fileName, validation) {
     const { conflict } = validation;
     const summary = summarizeImportPlan(validation.plan, { currentMaxes });
+    let mode = 'new';
+    const defaultTarget = (conflict && existingIds.includes(conflict.programId) ? conflict.programId : null)
+      ?? activeProgramId ?? programList[0]?.id ?? null;
     body.innerHTML = `
       ${conflict ? `
-        <div class="card card-notice import-conflict">
+        <div class="card card-notice import-conflict" id="import-conflict-card">
           <h3>Program id already in use</h3>
           <p>You already have a program with the id <strong>${escapeHtml(conflict.programId)}</strong>.
-          Importing never overwrites an existing program — choose a different id for this one.</p>
+          Importing as a new program never overwrites it — choose a different id for this one,
+          or choose <strong>Update a program you already have</strong> below.</p>
           <div class="form-row">
             <input type="text" id="import-id-input" value="${escapeHtml(conflict.suggestion)}" aria-label="New program id" autocomplete="off" spellcheck="false">
             <button type="button" class="btn btn-primary" id="import-id-apply">Use this id</button>
@@ -218,8 +253,20 @@ export async function mount(root) {
         </div>` : ''}
       ${summaryHtml(summary)}
       ${validation.warnings?.length ? `<div class="card"><h3>Warnings</h3>${issueListHtml(validation.warnings, 'is-warning')}</div>` : ''}
+      ${programList.length ? `
+      <div class="card" id="import-mode-card">
+        <h3>Where should it go?</h3>
+        <label class="import-mode"><input type="radio" name="import-mode" value="new" checked> Add as a new program</label>
+        <label class="import-mode"><input type="radio" name="import-mode" value="update"> Update a program you already have — keeps your place in it</label>
+        <div id="import-update-panel" hidden>
+          <label class="field">Program to update
+            <select id="import-update-target">${programList.map((pr) => `<option value="${escapeHtml(pr.id)}"${pr.id === defaultTarget ? ' selected' : ''}>${escapeHtml(pr.name)}${pr.id === activeProgramId ? ' (active)' : ''}</option>`).join('')}</select>
+          </label>
+          <div id="import-update-preview" role="status"></div>
+        </div>
+      </div>` : ''}
       <div class="card">
-        <p class="text-muted">From ${escapeHtml(fileName)}. The program is added to your list; your active program doesn't change until you choose Set Active.</p>
+        <p class="text-muted" id="import-confirm-note">From ${escapeHtml(fileName)}. The program is added to your list; your active program doesn't change until you choose Set Active.</p>
         <div class="btn-stack">
           <button type="button" class="btn btn-primary btn-large" id="import-confirm-btn" ${conflict ? 'disabled' : ''}>Import Program</button>
           <button type="button" class="btn btn-secondary" id="import-cancel-btn">Cancel</button>
@@ -239,7 +286,76 @@ export async function mount(root) {
       renderPreview(fileName, result.validation);
     });
 
+    // ── v30: new program vs. update an existing one ──────────────────────
+    const confirmBtn = body.querySelector('#import-confirm-btn');
+    const confirmNote = body.querySelector('#import-confirm-note');
+    const newNote = confirmNote.innerHTML;
+    const updatePanel = body.querySelector('#import-update-panel');
+    const targetSelect = body.querySelector('#import-update-target');
+    const conflictCard = body.querySelector('#import-conflict-card');
+    let previewSeq = 0;
+    let updateReady = false;
+
+    async function refreshUpdatePreview() {
+      const seq = ++previewSeq;
+      updateReady = false;
+      confirmBtn.disabled = true;
+      const out = body.querySelector('#import-update-preview');
+      out.innerHTML = '<p class="text-muted">Checking what would change…</p>';
+      let r;
+      try {
+        r = await previewProgramUpdate(uid, targetSelect.value, validation.plan);
+      } catch (err) {
+        if (seq !== previewSeq) return;
+        out.innerHTML = `<p class="login-error">Could not check this program right now. ${escapeHtml(err.message)}</p>`;
+        return;
+      }
+      if (seq !== previewSeq || mode !== 'update') return;
+      out.innerHTML = updatePreviewHtml(r);
+      updateReady = r.ok;
+      confirmBtn.disabled = !r.ok;
+    }
+
+    function setMode(next) {
+      mode = next;
+      const update = mode === 'update';
+      updatePanel.hidden = !update;
+      if (conflictCard) conflictCard.hidden = update;
+      confirmBtn.textContent = update ? 'Update Program' : 'Import Program';
+      confirmNote.innerHTML = update
+        ? `From ${escapeHtml(fileName)}. The chosen program gets this file's weeks and days; its id and name, your place in it, your workout history and 1RMs stay as they are.`
+        : newNote;
+      if (update) refreshUpdatePreview();
+      else confirmBtn.disabled = !!validation.conflict;
+    }
+    body.querySelectorAll('input[name="import-mode"]').forEach((r) => r.addEventListener('change', (e) => setMode(e.target.value)));
+    targetSelect?.addEventListener('change', refreshUpdatePreview);
+
+    async function doUpdate() {
+      const status = body.querySelector('#import-confirm-status');
+      if (!updateReady) return;
+      body.querySelectorAll('button, input, select').forEach((el) => { el.disabled = true; });
+      status.classList.remove('login-error');
+      status.textContent = 'Updating…';
+      try {
+        const r = await updateProgramFromImport(uid, targetSelect.value, validation.plan);
+        if (r.ok) {
+          renderUpdateSuccess(r, targetSelect.selectedOptions[0]?.textContent ?? r.programId);
+          return;
+        }
+        status.classList.add('login-error');
+        status.textContent = r.message;
+      } catch (err) {
+        console.error('programImport: update failed', err);
+        status.classList.add('login-error');
+        status.textContent = `Update failed — nothing was changed. ${err.message}`;
+      }
+      body.querySelectorAll('button, input, select').forEach((el) => { el.disabled = false; });
+      refreshUpdatePreview();
+    }
+
     body.querySelector('#import-confirm-btn').addEventListener('click', async () => {
+      if (mode === 'update') { await doUpdate(); return; }
       const btn = body.querySelector('#import-confirm-btn');
       const status = body.querySelector('#import-confirm-status');
       body.querySelectorAll('button, input').forEach((el) => { el.disabled = true; });
@@ -272,6 +388,33 @@ export async function mount(root) {
     });
   }
 
+  /** v30: after an import or update the program list changed (new program / saved copy) — refresh it for the next file. */
+  async function reloadPrograms() {
+    try {
+      const [programs, activeRun] = await Promise.all([listPrograms(uid), getActiveProgramRun(uid)]);
+      existingIds = programs.map((p) => p.id);
+      programList = programs.map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
+      activeProgramId = activeRun?.programId ?? null;
+    } catch (err) {
+      console.warn('programImport: could not refresh the program list', err);
+    }
+  }
+
+  function renderUpdateSuccess(r, name) {
+    body.innerHTML = `
+      <div class="card card-primary" id="import-update-success">
+        <h3 class="card-title">Program updated</h3>
+        <p>“${escapeHtml(name.replace(/ \(active\)$/, ''))}” now uses the new file. Your place in it, your workout history and your 1RMs are unchanged —
+        the next workout you start uses the new plan.</p>
+        <p class="text-muted">The previous version was saved as “${escapeHtml(r.backupName)}” in your programs (not active).</p>
+        <div class="btn-stack">
+          <a class="btn btn-primary" href="#/program?id=${encodeURIComponent(r.programId)}">View Program</a>
+          <button type="button" class="btn btn-secondary" id="import-another-btn">Import Another</button>
+        </div>
+      </div>`;
+    body.querySelector('#import-another-btn').addEventListener('click', async () => { await reloadPrograms(); renderChoose(); });
+  }
+
   function renderSuccess(programId, name) {
     body.innerHTML = `
       <div class="card card-primary">
@@ -283,7 +426,7 @@ export async function mount(root) {
           <button type="button" class="btn btn-secondary" id="import-another-btn">Import Another</button>
         </div>
       </div>`;
-    body.querySelector('#import-another-btn').addEventListener('click', () => renderChoose());
+    body.querySelector('#import-another-btn').addEventListener('click', async () => { await reloadPrograms(); renderChoose(); });
   }
 
   renderChoose();

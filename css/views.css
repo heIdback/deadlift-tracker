@@ -582,7 +582,7 @@
 /* v29 — "Last time" on the active workout (js/views/workout.js showPreviousPerformance). */
 .prev-session { color: var(--text-secondary); }
 .set-prev {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   padding: 0 var(--space-2) 0 calc(28px + var(--space-4));
   overflow-wrap: anywhere;
@@ -590,3 +590,12 @@
 @media (max-width: 380px) {
   .set-prev { padding-left: calc(22px + var(--space-3)); }
 }
+/* v30: the values themselves stand out; the "Last:" label stays grey.
+   Not the gold accent — that already means "set changed from plan". */
+.set-prev-value { color: var(--text-primary); font-weight: 700; }
+
+/* v30 — Program Import: "Update a program you already have". */
+.import-mode { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; overflow-wrap: anywhere; }
+.import-mode input { flex: none; width: 20px; height: 20px; }
+.import-update-diff li.is-unchanged { color: var(--text-secondary); }
+.import-update-diff li.is-removed { color: var(--danger); }

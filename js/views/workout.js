@@ -414,7 +414,14 @@ function showPreviousPerformance(root, prev) {
       if (!text) return;
       const line = document.createElement('div');
       line.className = 'set-prev';
-      line.textContent = `Last: ${text}`;
+      // v30: grey "Last:" label + the values in bold, near-white (easier to read mid-set).
+      const label = document.createElement('span');
+      label.className = 'set-prev-label';
+      label.textContent = 'Last:';
+      const value = document.createElement('strong');
+      value.className = 'set-prev-value';
+      value.textContent = text;
+      line.append(label, ' ', value);
       block.querySelector('.set-row')?.after(line);
     });
   });

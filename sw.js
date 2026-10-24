@@ -384,6 +384,12 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
+// v30 — Program Import → "Update a program you already have" (keeps the
+// program id and its run position; saves a copy of the old version first):
+// NEW modules js/services/programUpdateService.js + js/utils/programUpdate.js
+// (statically imported by views/programImport.js), listed below. Also the
+// bolder "Last:" values on the active workout (views/workout.js, css).
+//
 // v29 — "Last time" under each set on the active workout: NEW statically
 // imported module js/utils/previousPerformance.js (workoutService.js), listed
 // below; workoutService.js, views/workout.js and css/views.css changed. The
@@ -407,7 +413,7 @@
 // js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
 // + views/workout.js) and is listed below; workoutService.js and
 // views/workout.js changed, so the shell cache name changes too.
-const CACHE_VERSION = 'v29';
+const CACHE_VERSION = 'v30';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -441,6 +447,7 @@ const SHELL_MODULES = [
   'js/services/measurementService.js',
   'js/services/programEditService.js',
   'js/services/programService.js',
+  'js/services/programUpdateService.js',
   'js/services/programSwitchService.js',
   'js/services/restoreService.js',
   'js/services/trainingGenerationService.js',
@@ -467,6 +474,7 @@ const SHELL_MODULES = [
   'js/utils/programImport.js',
   'js/utils/programProgress.js',
   'js/utils/programSwitch.js',
+  'js/utils/programUpdate.js',
   'js/utils/prAnalytics.js',
   'js/utils/previousPerformance.js',
   'js/utils/progressAnalytics.js',

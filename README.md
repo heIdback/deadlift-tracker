@@ -1442,10 +1442,28 @@ it exactly as stored.
 - Home shows "Week N / <the program's own number of weeks>" (was a
   hard-coded "/ 8").
 
+### Program Import → update a program you already have
+After the preview, **Where should it go?** offers *Add as a new program* (the
+default — unchanged behaviour) or *Update a program you already have*. Updating
+gives the chosen program the file's weeks and days under the **same id and
+name**, so its run keeps its place (Week/Day) — no new run, no restart. The
+preview lists what changes day by day (matched by day order) and the place that
+is kept. One all-or-nothing transaction (`js/services/programUpdateService.js`,
+rules in `js/utils/programUpdate.js`):
+- refused while a workout is in progress;
+- refused, with the reason, when the active run (or a paused run Set Active
+  would resume) sits on a Week/Day the new file doesn't have;
+- first saves a copy of the old version as a separate, inactive program
+  "<name> (before update YYYY-MM-DD)" (`backupOfProgramId` set), in the same
+  transaction. The update itself has no undo; the copy keeps the old plan
+  (setting the copy active starts it from the beginning, not from your place).
+Finished workouts keep their own copy of the plan; 1RMs, runs and the profile
+are never written. Needs a connection. No rules/index change.
+
 ### "Last time" on the active workout
 While a workout is in progress, every exercise shows where its numbers last
 came from ("Last time: <date> · Week N · <day>") and every set shows what was
-done at the same place last time ("Last: 160 kg × 6 @ RPE 8", "(failed)",
+done at the same place last time ("Last: **160 kg × 6 @ RPE 8**" — values bold, label grey, "(failed)",
 "skipped", "not done"). Last time = the most recent finished workout (not an
 explicit Skip, not from before a training reset) in which that exercise was
 actually logged; warm-up ramps and working sets are matched separately, set by
