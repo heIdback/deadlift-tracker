@@ -11,6 +11,9 @@ import {
   renameProgram, duplicateProgram,
 } from '../services/programService.js';
 import { setActiveProgram } from '../services/programSwitchService.js';
+// v31: hide / delete inactive programs.
+import { setProgramHidden, deleteProgram } from '../services/programManageService.js';
+import { visiblePrograms, hiddenPrograms, isHiddenProgram } from '../utils/programManage.js';
 import { totalWeeksOf, validateRequiredName } from '../utils/programEditModel.js';
 import { escapeHtml } from '../utils/dom.js';
 
@@ -51,8 +54,10 @@ function importButtonHtml() {
   return '<a class="btn btn-secondary" href="#/program?import=1" id="import-program-link">Import Program</a>';
 }
 
-function programListSection(programs, activeProgramId) {
-  if (programs.length < 2) return '';
+function programListSection(allPrograms, activeProgramId) {
+  const programs = visiblePrograms(allPrograms);
+  const hidden = hiddenPrograms(allPrograms);
+  if (programs.length < 2 && hidden.length === 0) return '';
   return `
     <h3>Your Programs</h3>
     ${programs.map((p) => `
@@ -71,6 +76,15 @@ function programListSection(programs, activeProgramId) {
             <button type="button" class="btn btn-secondary" data-action="set-active" data-program-id="${escapeHtml(p.id)}">Set Active</button>
           </div>` : ''}
       </div>`).join('')}
+    ${hidden.length ? `
+      <details class="card" id="hidden-programs">
+        <summary>Hidden programs (${hidden.length})</summary>
+        ${hidden.map((p) => `
+          <div class="admin-row hidden-program-row">
+            <a href="#/program?id=${encodeURIComponent(p.id)}">${escapeHtml(p.name) || '(untitled program)'}</a>
+            <button type="button" class="btn btn-secondary" data-action="unhide" data-program-id="${escapeHtml(p.id)}">Unhide</button>
+          </div>`).join('')}
+      </details>` : ''}
   `;
 }
 
@@ -87,7 +101,7 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
 
   return `
     <div class="card card-primary">
-      <div class="card-title">${escapeHtml(program.name) || '(untitled program)'}</div>
+      <div class="card-title">${escapeHtml(program.name) || '(untitled program)'}${isHiddenProgram(program) ? ' <span class="badge-hidden">Hidden</span>' : ''}</div>
       ${programMetaBits(program).length ? `<p class="card-sub">${programMetaBits(program).join(' · ')}</p>` : ''}
       ${isActive
         ? `<p class="card-sub">Current position: Week ${currentPos?.week ?? '—'} · ${escapeHtml(currentDay?.name) || `Day ${currentPos?.dayOrder ?? '—'}`}</p>`
@@ -96,6 +110,11 @@ function overviewSection(program, days, { isActive, currentPos, totalWeeks }) {
         ${!isActive ? `<button type="button" class="btn btn-primary" data-action="set-active" data-program-id="${escapeHtml(program.id)}">Set Active</button>` : ''}
         <button type="button" class="btn btn-secondary" data-action="rename">Rename</button>
         <button type="button" class="btn btn-secondary" data-action="duplicate">Duplicate</button>
+        ${!isActive ? `
+        ${isHiddenProgram(program)
+    ? `<button type="button" class="btn btn-secondary" data-action="unhide" data-program-id="${escapeHtml(program.id)}">Unhide</button>`
+    : `<button type="button" class="btn btn-secondary" data-action="hide" data-program-id="${escapeHtml(program.id)}">Hide</button>`}
+        <button type="button" class="btn btn-danger" data-action="delete">Delete</button>` : ''}
       </div>
       <div id="program-inline-form"></div>
     </div>
@@ -220,6 +239,27 @@ export async function mount(root, { path } = {}) {
       btn.addEventListener('click', () => handleSetActive(btn.dataset.programId, btn));
     });
 
+    // v31: Hide / Unhide (reversible) — list rows and the overview card share one handler.
+    root.querySelectorAll('[data-action="hide"], [data-action="unhide"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        const hide = btn.dataset.action === 'hide';
+        btn.disabled = true;
+        try {
+          const r = await setProgramHidden(uid, btn.dataset.programId, hide);
+          if (!r.ok) { setStatus(r.message); btn.disabled = false; return; }
+          await loadAndRender();
+          // the view was re-rendered: write into the NEW status line
+          const fresh = root.querySelector('#program-status');
+          if (fresh) fresh.textContent = hide ? 'Program hidden — find it under “Hidden programs”.' : 'Program is back in your list.';
+        } catch (err) {
+          console.error(err);
+          setStatus(`Error: ${err.message}`);
+          btn.disabled = false;
+        }
+      });
+    });
+
     const inlineForm = root.querySelector('#program-inline-form');
 
     const renameBtn = root.querySelector('[data-action="rename"]');
@@ -241,6 +281,43 @@ export async function mount(root, { path } = {}) {
         } catch (err) {
           console.error(err);
           setStatus(`Error: ${err.message}`);
+        }
+      });
+    });
+
+    // v31: Delete (permanent) — inline confirmation, inactive programs only.
+    root.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
+      inlineForm.innerHTML = `
+        <div class="card card-danger" id="delete-confirm">
+          <p><strong>Delete “${escapeHtml(program.name || program.id)}” permanently?</strong></p>
+          <p class="text-muted">The program, its days and any paused progress in it are removed. Your workout history is kept —
+          each finished workout keeps its own copy of the plan. This can't be undone. (To just tidy the list, use Hide instead.)</p>
+          <div class="btn-stack">
+            <button type="button" class="btn btn-danger" id="delete-confirm-btn">Delete permanently</button>
+            <button type="button" class="btn btn-secondary" id="delete-cancel-btn">Cancel</button>
+          </div>
+          <p class="form-status" id="delete-status" role="status"></p>
+        </div>`;
+      inlineForm.querySelector('#delete-cancel-btn').addEventListener('click', () => { inlineForm.innerHTML = ''; });
+      inlineForm.querySelector('#delete-confirm-btn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (btn.disabled) return;
+        inlineForm.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        const st = inlineForm.querySelector('#delete-status');
+        st.textContent = 'Deleting…';
+        try {
+          const r = await deleteProgram(uid, program.id);
+          if (!r.ok) {
+            st.textContent = r.message;
+            inlineForm.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+            return;
+          }
+          if (location.hash === '#/program') await loadAndRender();
+          else location.hash = '#/program';
+        } catch (err) {
+          console.error(err);
+          st.textContent = `Delete failed — nothing was deleted. ${err.message}`;
+          inlineForm.querySelectorAll('button').forEach((b) => { b.disabled = false; });
         }
       });
     });

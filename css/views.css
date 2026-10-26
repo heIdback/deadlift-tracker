@@ -599,3 +599,56 @@
 .import-mode input { flex: none; width: 20px; height: 20px; }
 .import-update-diff li.is-unchanged { color: var(--text-secondary); }
 .import-update-diff li.is-removed { color: var(--danger); }
+
+/* v31 — hidden programs (js/views/program.js). */
+.badge-hidden {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+#hidden-programs summary { cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+.hidden-program-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; overflow-wrap: anywhere; }
+.hidden-program-row a { min-width: 0; }
+
+/* v32 — active workout: bigger inputs, progress, collapsible exercises, ±2.5 kg. */
+.set-input, .set-check, .set-more { min-height: 48px; }
+.set-input { font-size: 1.1rem; }
+.set-check { min-width: 48px; }
+.set-row.has-more { grid-template-columns: 28px 1fr 1fr 48px 32px; }
+.workout-progress { font-weight: 700; color: var(--text-primary); margin: var(--space-1) 0; }
+.exercise-head {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%;
+  min-height: 44px; padding: 0; border: none; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.exercise-head .card-title { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.exercise-count { flex: none; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.exercise-card.is-finished .exercise-count { color: var(--success); }
+.exercise-chevron { flex: none; color: var(--text-secondary); transition: transform 0.15s; }
+.exercise-card.is-collapsed .exercise-chevron { transform: rotate(-90deg); }
+.exercise-card.is-collapsed .exercise-body { display: none; }
+.set-sub {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  padding-left: calc(28px + var(--space-4));
+}
+.set-sub .set-prev { padding: 0; flex: 1; min-width: 0; }
+.set-adjust { display: flex; gap: var(--space-1); margin-left: auto; flex: none; }
+.btn-step {
+  min-width: 52px; min-height: 36px; padding: 0 var(--space-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-primary);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.btn-step:active { background: var(--surface-raised); }
+@media (max-width: 380px) {
+  .set-row.has-more { grid-template-columns: 22px 1fr 1fr 44px 26px; }
+  .set-sub { padding-left: calc(22px + var(--space-3)); }
+  .btn-step { min-width: 46px; }
+  .set-check { min-width: 44px; }
+}
+.next-main-set { font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2); }

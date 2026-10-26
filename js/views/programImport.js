@@ -151,7 +151,7 @@ export async function mount(root) {
   try {
     const [programs, profile, activeRun] = await Promise.all([listPrograms(uid), getUserProfile(uid), getActiveProgramRun(uid)]);
     existingIds = programs.map((p) => p.id);
-    programList = programs.map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
+    programList = programs.filter((p) => p.hidden !== true).map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
     activeProgramId = activeRun?.programId ?? null;
     currentMaxes = profile?.currentMaxes ?? {};
   } catch (err) {
@@ -393,7 +393,7 @@ export async function mount(root) {
     try {
       const [programs, activeRun] = await Promise.all([listPrograms(uid), getActiveProgramRun(uid)]);
       existingIds = programs.map((p) => p.id);
-      programList = programs.map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
+      programList = programs.filter((p) => p.hidden !== true).map((p) => ({ id: p.id, name: p.name ?? p.id })).sort((a, b) => a.name.localeCompare(b.name));
       activeProgramId = activeRun?.programId ?? null;
     } catch (err) {
       console.warn('programImport: could not refresh the program list', err);

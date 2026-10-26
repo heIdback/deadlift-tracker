@@ -180,7 +180,7 @@ export async function mount(root) {
           <p>Active: <strong>${escapeHtml(currentProgram.name)}</strong></p>
           ${renderReviewFlags(currentProgram)}
         ` : multipleUnresolved ? `
-          <p class="text-muted">Multiple programs exist with no active run. Start one from the Dashboard to make it active.</p>
+          <p class="text-muted">Multiple programs exist with no active run. Open the <a href="#/program">Program</a> tab and choose <strong>Set Active</strong> on one.</p>
         ` : `
           <p class="text-muted">Setting up your program… try refreshing in a moment.</p>
         `}

@@ -1,25 +1,24 @@
 # Deadlift Tracker
 
-A personal training dashboard and workout logger, built as a static site
-(vanilla JS + Firebase) so it can be hosted for free on GitHub Pages. It
-replaces a Google Sheets–based deadlift program while staying architected
-for multiple users, multiple programs, and future features (nutrition,
-progress photos, coach/client relationships, etc.) without a rewrite.
+A personal training dashboard and workout logger by heldback, built as a
+static site (vanilla JS + Firebase), hosted on **Firebase Hosting** on the
+free **Spark plan** (no Cloud Functions, no paid services). It replaced a
+Google Sheets–based deadlift program and is built for multiple users,
+multiple programs and future features without a rewrite.
 
-**Status:** Firebase/auth/Firestore foundation, navigation, dashboard, the
-three-layer workout model (template → programRun → immutable snapshot)
-with idempotent Start/Resume and automatic programRun advancement, an
-interactive mobile-first per-set logger with autosave, an admin-approval
-access-control layer (see §7a), automatic new-user onboarding — a starter
-program installs itself and the user is asked for their starting 1RMs,
-with no Excel/Google Sheet/manual-import step required (see §15a) — a
-free, manual JSON/CSV "Backup My Data" export, a read-only Admin
-Dashboard/User Detail, and "Restore My Data" from that same JSON backup
-(Phase 3F — see §7b's "Restore semantics" for exactly what restore does
-and does not do) are all built.
-Progression/PR detection/analytics (Phase 4) and the full in-browser
-spreadsheet importer (Phase 5) are not yet built; their placeholder
-screens say so.
+**Status (app 1.1.0, cache v32):** Google sign-in with admin approval
+(§7a), automatic onboarding (a starter program installs itself and the user
+enters their starting 1RMs — §15a), the three-layer workout model (template →
+programRun → immutable snapshot) with a mobile-first per-set logger
+(actual kg/reps, failed/skipped sets, RPE, notes, "Last time" values, progress
+counts, screen kept on), History with limited post-workout corrections,
+Progress with PR detection, Current/Tested/Estimated 1RM, charts and 1RM
+history, Program management (browse, edit days, rename, duplicate, Set Active,
+hide/delete inactive programs), Program Import from JSON/CSV (as a new program
+or as an update of an existing one), skip ahead, backup/restore, analysis
+export, an Admin dashboard with a Spark-compatible "Reset training data", and a
+one-click Windows deploy script (`deploy.cmd`). Sections 17+ are the change
+history of each release.
 
 ---
 
@@ -28,7 +27,8 @@ screens say so.
 - **Frontend:** HTML5 + CSS3 + vanilla JS (ES modules), no build step, no
   framework.
 - **Backend:** Firebase Authentication (Google Sign-In) + Cloud Firestore.
-- **Hosting:** static files, deployable as-is to GitHub Pages.
+- **Hosting:** static files on Firebase Hosting (`firebase.json`, target
+  `production` → site `deadlift-tracker-app`), free Spark plan.
 - **Why no framework:** the app is small enough that a hash router and a
   handful of view modules cover it, and it keeps the project trivially
   hostable and easy to reason about for someone who isn't a full-time
@@ -114,7 +114,7 @@ README.md
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
 2. Name it (e.g. `deadlift-tracker`). Google Analytics is optional — skip it for a personal app.
-3. Once created, click the **`</>`** (web) icon to register a web app. Skip Firebase Hosting (you're using GitHub Pages).
+3. Once created, click the **`</>`** (web) icon to register a web app (Firebase Hosting is set up from the CLI — see §12).
 4. Copy the `firebaseConfig` object it shows you.
 
 ## 5. Enable Google Authentication
@@ -123,7 +123,8 @@ README.md
 2. **Sign-in method** tab → enable **Google**. Pick a support email.
 3. Still on Authentication, go to **Settings → Authorized domains** and add:
    - `localhost` (usually already there, for local testing)
-   - `USERNAME.github.io` (your GitHub Pages domain, once you know it — see §13)
+   - your Firebase Hosting domains, e.g. `deadlift-tracker-app.web.app` and
+     `deadlift-tracker-app.firebaseapp.com` (usually added automatically — see §13)
 
 ## 6. Create Firestore
 
@@ -227,7 +228,7 @@ permissions, not Firestore Security Rules):
    together, the account is either fully locked out (rules deployed, no
    bootstrap doc yet) or unprotected (bootstrap doc exists, old rules still
    live) — the window is only as long as it takes you to do both steps.
-6. Deploy the updated app files (GitHub Pages). Sign in as yourself — you
+6. Deploy the updated app files (Firebase Hosting, §12). Sign in as yourself — you
    should land straight in the app with an **Admin** tab, no pending screen.
 
 After this one-time step, all further approvals/disables happen entirely
@@ -444,10 +445,10 @@ touching any other user's data by the same security rules as everything
 else — it's just triggered automatically now instead of from a Profile
 button.
 
-A full in-browser importer (upload any `.xlsx`, get a live preview, fix
-flagged items in the UI) is planned for Phase 5, for adding/authoring a
-*second* program — not needed for the packaged starter program covered
-here.
+Additional programs are added in the app: **Program → Import Program**
+takes a JSON or CSV file, shows a preview and either adds it as a new program
+or updates one you already have (see "Program Import" in §20). An `.xlsx`
+file is converted to JSON/CSV first.
 
 ## 11. GitHub repository setup
 
@@ -470,31 +471,32 @@ node_modules/
 Your real `FIREBASE_CONFIG` values in `config/app.config.js` are fine to
 commit — see the note in §8.
 
-## 12. GitHub Pages deployment
+## 12. Firebase Hosting deployment
 
-1. Repository → **Settings → Pages**.
-2. **Source:** Deploy from a branch → branch `main`, folder `/ (root)`.
-3. Save. Your app will be live at `https://USERNAME.github.io/REPOSITORY/`.
+The app is deployed with the Firebase CLI to the hosting target
+`production` (site `deadlift-tracker-app`, project `dltracker-8bed3`, see
+`.firebaserc`/`firebase.json`):
 
-The app already accounts for not being hosted at the domain root:
-- `index.html` uses **relative** paths (`css/...`, `js/...`).
-- Routing is **hash-based** (`#/home`, `#/workout`, …), so a full page
-  refresh on any screen still works — GitHub Pages serves `index.html` for
-  the base path and the hash is resolved client-side, with no server
-  rewrite rules needed.
-
-## 13. Add the GitHub Pages domain to Firebase Authentication
-
-Back in Firebase Console → **Authentication → Settings → Authorized
-domains → Add domain**, add exactly:
-
-```
-USERNAME.github.io
+```bash
+firebase deploy --only hosting:production
 ```
 
-(not the full path with `/REPOSITORY/` — just the domain). Without this,
-Google Sign-In will fail with an `auth/unauthorized-domain` error once
-you're not on `localhost` anymore.
+On Windows, `deploy.cmd` does the whole release in one go (checks, commit,
+push to GitHub, hosting deploy) — see "Deploying (one click, Windows)" in §20.
+Firestore rules/indexes are deployed separately and only when they change
+(`firebase deploy --only firestore:rules,firestore:indexes`). Routing is
+hash-based (`#/home`, `#/workout`, …) and every asset path is relative, so no
+rewrite rules are needed. After a deploy, open apps show "Update available"
+(the service worker's cache version changes with each release).
+
+## 13. Authorized domains for Google sign-in
+
+Firebase Console → **Authentication → Settings → Authorized domains** must
+list every domain the app is opened from: `localhost` for local testing and
+the Hosting domains (`deadlift-tracker-app.web.app`,
+`deadlift-tracker-app.firebaseapp.com` — Firebase adds these itself for its
+own Hosting sites) plus any custom domain. Without it Google sign-in fails
+with `auth/unauthorized-domain`.
 
 ## 14. Firestore schema (current)
 
@@ -524,8 +526,9 @@ users/{uid}/workouts/{workoutId}       completed log (layer 3) — Phase 3 write
   sets[]: plannedKg, plannedReps (frozen plan), actualKg, actualReps, rpe, note,
           completed, completedAt, status? ('completed'|'modified'|'failed'|'skipped') // v1.1
 
-users/{uid}/records/{exerciseId}       derived PR cache — Phase 4
-users/{uid}/progressionSuggestions/{id}  — Phase 4
+users/{uid}/records/{exerciseId}       derived PR cache (cleared by a training reset)
+users/{uid}/progressionSuggestions/{id}  reserved; also holds the training-generation
+                                       sentinel __training-generation-<token> (§20)
 users/{uid}/measurements/{id}          type, value, unit, date, note
 users/{uid}/nutrition/{date}           reserved, unused in v1
 ```
@@ -633,15 +636,12 @@ for this phase.
 
 ## Known limitations (current)
 
-- Per-set logging has no rest timer and no "previous performance"
-  comparison yet — both are deferred, along with PR detection and
-  progression suggestions (Phase 4).
-- History and Progress screens are still placeholders (Phase 4).
+- No rest timer yet, and no rule-based training suggestions (both deferred).
+  PR detection, History and Progress are built (§18–§19).
 - Finishing the final workout of the final week sets `programCompleted:
   true` on the programRun (see §14) but there's no dedicated "program
-  complete" screen yet — Home/Workout degrade to showing `days[0]` or `—`.
-  Manual repeat/skip/move controls (`advanceProgramRun`) exist in
-  `programService.js` but aren't wired to any UI yet.
+  complete" screen yet (planned). Skipping forward is built ("Choose another
+  day", §20); there is no way to move backwards.
 - Autosave writes the whole `exercises` array per save (Firestore has no
   per-array-element update); debounced for typed fields, immediate for
   completion taps and for the one-time backfill of any workout started
@@ -677,10 +677,9 @@ for this phase.
   rules once sync resumes, but reads of already-cached data are not
   retroactively hidden). Inherent to any offline-first client + server-
   enforced-rules design; not fixed in this phase.
-- Authoring a **second** program still means hand-building a JSON file
-  (§15) — there's no in-browser `.xlsx` upload with live preview yet
-  (Phase 5). The **starter** program (§15a) no longer needs any of that:
-  it installs itself automatically for a new user.
+- Program Import takes JSON or CSV with a live preview (§20); an `.xlsx`
+  sheet has to be converted to one of those first. The **starter** program
+  (§15a) installs itself automatically for a new user.
 - Three spreadsheet prescriptions are explicitly unresolved by design —
   see `data/import-mapping.json` → `ambiguousPrescriptions`, and the
   dashboard/profile screens surface them as review flags.
@@ -1441,6 +1440,18 @@ it exactly as stored.
   redirects to Program → Import Program.
 - Home shows "Week N / <the program's own number of weeks>" (was a
   hard-coded "/ 8").
+
+### Program → Hide / Delete inactive programs
+Open an inactive program (Program → its name): **Hide** takes it off "Your
+Programs" (and off the import's "Update a program" list) — it waits under
+**Hidden programs (N)** at the bottom of the list, where **Unhide** brings it
+back; only a `hidden: true` flag is written. **Delete** (after an inline
+confirmation) permanently removes the program, its days and its own paused
+runs in one batch; workout history stays (each finished workout keeps its own
+copy of the plan). The active program has neither button, and both are refused
+while a workout of that program is in progress or offline. Backups/restore
+keep the hidden flag. Code: `js/services/programManageService.js`,
+`js/utils/programManage.js`. No rules/index change.
 
 ### Program Import → update a program you already have
 After the preview, **Where should it go?** offers *Add as a new program* (the

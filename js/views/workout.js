@@ -18,6 +18,10 @@ import { setBlockHtml, wireSetBlock } from '../components/setResult.js';
 import { resolveSetStatus, SET_STATUS } from '../utils/setLogging.js';
 import { orderExercisesWarmupFirst } from '../utils/exerciseOrdering.js';
 import { escapeHtml } from '../utils/dom.js';
+import { readableBasisName } from '../utils/programDisplay.js';
+// v32: progress counts, finished-exercise collapse, ±2.5 kg, screen kept on.
+import { exerciseProgress, workoutProgress, isExerciseFinished, awaitsReps, stepKg, KG_STEP } from '../utils/workoutProgress.js';
+import { keepScreenOn } from '../core/wakeLock.js';
 import { formatDate } from '../utils/dates.js';
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
@@ -56,17 +60,18 @@ function formatReps(reps, durationSec) {
   return '—';
 }
 
-function formatLoad(load) {
+function formatLoad(load, ex) {
   if (!load) return '—';
+  const of = () => readableBasisName(load.basisExerciseId, ex); // v32: a name, never the internal id
   switch (load.type) {
     case 'percent':
       return load.displayTargetKg != null
-        ? `${load.displayTargetKg} kg (${Math.round(load.percent * 100)}% of ${load.basisExerciseId} @ ${load.basisOneRepMax} kg)`
-        : `${Math.round(load.percent * 100)}% of ${load.basisExerciseId} — no 1RM on file yet`;
+        ? `${load.displayTargetKg} kg (${Math.round(load.percent * 100)}% of ${of()} @ ${load.basisOneRepMax} kg)`
+        : `${Math.round(load.percent * 100)}% of ${of()} — no 1RM on file yet`;
     case 'percentRange':
       return load.displayRangeKg
-        ? `${load.displayRangeKg[0]}–${load.displayRangeKg[1]} kg (${Math.round(load.min * 100)}–${Math.round(load.max * 100)}% of ${load.basisExerciseId})`
-        : `${Math.round(load.min * 100)}–${Math.round(load.max * 100)}% of ${load.basisExerciseId} — no 1RM on file yet`;
+        ? `${load.displayRangeKg[0]}–${load.displayRangeKg[1]} kg (${Math.round(load.min * 100)}–${Math.round(load.max * 100)}% of ${of()})`
+        : `${Math.round(load.min * 100)}–${Math.round(load.max * 100)}% of ${of()} — no 1RM on file yet`;
     case 'fixed':
       return load.kg != null ? `${load.kg} kg${load.perHand ? ' / hand' : ''}` : '—';
     case 'sets':
@@ -95,7 +100,7 @@ function renderExercisePreview(ex) {
   return `
     <div class="card">
       <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
-      <div class="card-sub">${ex.prescribed.sets ?? '—'} × ${escapeHtml(formatReps(ex.prescribed.reps, ex.prescribed.durationSec))} @ ${escapeHtml(formatLoad(ex.load))}</div>
+      <div class="card-sub">${ex.prescribed.sets ?? '—'} × ${escapeHtml(formatReps(ex.prescribed.reps, ex.prescribed.durationSec))} @ ${escapeHtml(formatLoad(ex.load, ex))}</div>
       ${targetRpeHtml(ex)}
       ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
     </div>`;
@@ -383,12 +388,32 @@ function renderSetRow(ex, s) {
  */
 function renderExerciseBlock(ex) {
   const rows = (ex.sets ?? []).map((s) => renderSetRow(ex, s)).join('');
-  return `
+  if (!rows) {
+    return `
     <div class="card exercise-card" data-entry-id="${escapeHtml(ex.entryId ?? '')}">
       <div class="card-title">${escapeHtml(ex.displayNameAtStart)}</div>
-      ${targetRpeHtml(ex)}
-      ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
-      ${rows ? `<div class="set-table">${rows}</div>` : '<p class="text-muted">Nothing to log for this item.</p>'}
+      <div class="exercise-body">
+        ${targetRpeHtml(ex)}
+        ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
+        <p class="text-muted">Nothing to log for this item.</p>
+      </div>
+    </div>`;
+  }
+  // v32: the header shows "done/total" and opens/closes the exercise; a
+  // finished exercise is collapsed by mountActiveWorkout (tap to open again).
+  const p = exerciseProgress(ex);
+  return `
+    <div class="card exercise-card has-sets" data-entry-id="${escapeHtml(ex.entryId ?? '')}">
+      <button type="button" class="exercise-head" aria-expanded="true">
+        <span class="card-title">${escapeHtml(ex.displayNameAtStart)}</span>
+        <span class="exercise-count" aria-label="sets done">${p.done}/${p.total}</span>
+        <span class="exercise-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="exercise-body">
+        ${targetRpeHtml(ex)}
+        ${ex.notes ? `<p class="text-muted">${escapeHtml(ex.notes)}</p>` : ''}
+        <div class="set-table">${rows}</div>
+      </div>
     </div>`;
 }
 
@@ -408,7 +433,8 @@ function showPreviousPerformance(root, prev) {
     head.className = 'card-sub prev-session';
     head.textContent = ['Last time', formatDate(info.finishedAt), info.week != null ? `Week ${info.week}` : '', info.dayName]
       .filter(Boolean).join(' · ').replace('Last time · ', 'Last time: ');
-    card.querySelector('.card-title')?.after(head);
+    const body = card.querySelector('.exercise-body');
+    if (body) body.prepend(head); else card.querySelector('.card-title')?.after(head);
     card.querySelectorAll('.set-block[data-set-id]').forEach((block) => {
       const text = info.sets.get(block.dataset.setId);
       if (!text) return;
@@ -422,7 +448,9 @@ function showPreviousPerformance(root, prev) {
       value.className = 'set-prev-value';
       value.textContent = text;
       line.append(label, ' ', value);
-      block.querySelector('.set-row')?.after(line);
+      // v32: shares one row with the −/+ buttons when the set has them
+      const sub = block.querySelector('.set-sub');
+      if (sub) sub.prepend(line); else block.querySelector('.set-row')?.after(line);
     });
   });
 }
@@ -433,6 +461,7 @@ function renderWorkoutHtml(workout) {
       <div class="card card-primary">
         <div class="card-label">In Progress — Week ${workout.week}</div>
         <h2 class="card-title">${escapeHtml(workout.dayName)}</h2>
+        <div class="workout-progress" id="workout-progress" role="status"></div>
         <div class="card-sub">Tap ✓ once you've done a set. Change the weight or reps if you did something different, or tap ⋯ to mark a set failed or skipped. Everything saves automatically.</div>
       </div>
       ${workout.exercises.map(renderExerciseBlock).join('')}
@@ -463,6 +492,14 @@ function renderWorkoutHtml(workout) {
  * round trip per keystroke.
  */
 function mountActiveWorkout(root, uid, workoutInput) {
+  // v32: a logger mounted earlier (e.g. a slow mount that finished after
+  // navigating) must not keep its listeners / screen lock alive.
+  if (pendingHideCleanup) {
+    const previous = pendingHideCleanup;
+    pendingHideCleanup = null;
+    previous();
+  }
+  let progressEl = null;
   const { exercises: backfilled, changed } = backfillSets(workoutInput.exercises);
   // FINAL POLISH PASS: `workout.exercises` here is both the render source
   // AND the exact array autosaved back via updateWorkoutExercises below —
@@ -661,14 +698,23 @@ function mountActiveWorkout(root, uid, workoutInput) {
   }
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', onPageHide);
+  const findExercise = (entryId) => workout.exercises.find((ex) => ex.entryId === entryId);
+  const wasFinished = new Map(); // entryId → finished at the last refresh
+  // v32: keep the phone's screen on while this workout is open (released when
+  // leaving the logger — Finish/Skip navigate away, which runs this cleanup).
+  const stopKeepingScreenOn = keepScreenOn(() => progressEl === null || progressEl.isConnected); // not yet rendered, or still on screen
   pendingHideCleanup = () => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('pagehide', onPageHide);
     unsubscribeLocalStatus();
+    stopKeepingScreenOn();
   };
 
   root.innerHTML = renderWorkoutHtml(workout);
+  progressEl = root.querySelector('#workout-progress'); // v32: this logger's own element — gone = logger gone
+  addKgStepButtons();
   wireEvents();
+  refreshProgress({ initial: true });
   // v29: "Last time" lines — loaded after the logger is already usable (never
   // delays it; nothing shown if unavailable, e.g. offline with nothing cached).
   getPreviousPerformance(uid, workout).then((prev) => showPreviousPerformance(root, prev));
@@ -687,13 +733,76 @@ function mountActiveWorkout(root, uid, workoutInput) {
     return null;
   }
 
+  // ── v32: progress, collapse, ±2.5 kg ─────────────────────────────────
+
+  function setCollapsed(card, collapsed) {
+    card.classList.toggle('is-collapsed', collapsed);
+    card.querySelector('.exercise-head')?.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  /**
+   * Updates "done/total" on every exercise and the workout total. An exercise
+   * that BECOMES finished collapses (on first render: every finished one);
+   * one the lifter re-opened stays open until it changes state again.
+   */
+  function refreshProgress({ initial = false, kind = 'action' } = {}) {
+    root.querySelectorAll('.exercise-card.has-sets').forEach((card) => {
+      const ex = findExercise(card.dataset.entryId);
+      if (!ex) return;
+      const p = exerciseProgress(ex);
+      const count = card.querySelector('.exercise-count');
+      if (count) count.textContent = `${p.done}/${p.total}`;
+      const finished = isExerciseFinished(ex);
+      card.classList.toggle('is-finished', finished);
+      // Collapse only when nothing is left to type: a set just marked Failed
+      // has its reps cleared and waits for the reps actually done.
+      const ready = finished && !awaitsReps(ex);
+      // never while typing (a tap — ✓ / Failed / Skip — finishes an exercise; typing doesn't fold it away under the fingers)
+      if (ready && (initial || (kind === 'action' && wasFinished.get(ex.entryId) === false))) setCollapsed(card, true);
+      wasFinished.set(ex.entryId, ready);
+    });
+    const total = workoutProgress(workout.exercises);
+    const el = root.querySelector('#workout-progress');
+    if (el) el.textContent = total.total ? `${total.done}/${total.total} sets` : '';
+  }
+
+  /** −2.5 / +2.5 under the kg field of every WORKING set that has a weight. */
+  function addKgStepButtons() {
+    root.querySelectorAll('.set-block[data-set-id]').forEach((blockEl) => {
+      const set = findSet(blockEl.dataset.setId);
+      const input = blockEl.querySelector('input.set-kg');
+      // only where there IS a weight to adjust (a planned or typed kg) — not on
+      // exercises the program leaves without a load ("—")
+      if (!set || !input || set.kind === 'warmup') return;
+      if (!Number.isFinite(set.plannedKg) && !Number.isFinite(set.actualKg)) return;
+      const sub = document.createElement('div');
+      sub.className = 'set-sub';
+      sub.innerHTML = `
+        <span class="set-adjust">
+          <button type="button" class="btn-step" data-step="-${KG_STEP}" aria-label="${KG_STEP} kg less">−${KG_STEP}</button>
+          <button type="button" class="btn-step" data-step="${KG_STEP}" aria-label="${KG_STEP} kg more">+${KG_STEP}</button>
+        </span>`;
+      blockEl.querySelector('.set-row')?.after(sub);
+      sub.querySelectorAll('.btn-step').forEach((btn) => btn.addEventListener('click', () => {
+        const typed = input.value === '' ? null : Number(input.value);
+        input.value = String(stepKg(typed, set.plannedKg, Number(btn.dataset.step)));
+        // the same path as typing: updates the set, its status and autosaves
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }));
+    });
+  }
+
   function wireEvents() {
+    root.querySelectorAll('.exercise-head').forEach((head) => head.addEventListener('click', () => {
+      const card = head.closest('.exercise-card');
+      setCollapsed(card, !card.classList.contains('is-collapsed'));
+    }));
     root.querySelectorAll('.set-block[data-set-id]').forEach((blockEl) => {
       const set = findSet(blockEl.dataset.setId);
       if (!set) return;
       // Typing gets the debounced save; taps (✓ / Failed / Skip) get prompt
-      // persistence — same cadence split as before v1.1.
-      wireSetBlock(blockEl, set, (kind) => queueSave(kind === 'action'));
+      // persistence — same cadence split as before v1.1. v32: + progress.
+      wireSetBlock(blockEl, set, (kind) => { queueSave(kind === 'action'); refreshProgress({ kind }); });
     });
 
     root.querySelector('#workout-note-input')?.addEventListener('input', (e) => {

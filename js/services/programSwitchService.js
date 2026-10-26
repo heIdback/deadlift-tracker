@@ -12,7 +12,7 @@
 // `allow write: if isApprovedUser(uid)` on that path — no rules change.
 // ─────────────────────────────────────────────────────────────────────────
 import {
-  doc, serverTimestamp, writeBatch, collection,
+  doc, serverTimestamp, writeBatch, collection, deleteField,
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
@@ -82,6 +82,10 @@ export async function setActiveProgram(uid, programId) {
         overrides: {},
       });
     }
+
+    // v32: the active program is never hidden (Program → Hide, v31) — Set
+    // Active on a hidden program brings it back into the list.
+    batch.update(doc(db, 'users', uid, 'programs', programId), { hidden: deleteField() });
 
     await commitTrainingBatch(uid, batch); // v22: admin-reset generation guard
     return { ok: true, alreadyActive: false, runId };

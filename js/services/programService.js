@@ -238,7 +238,9 @@ export async function getPrimaryProgramContext(uid) {
     const program = await getProgram(uid, run.programId);
     return { program, run, multipleUnresolved: false };
   }
-  const programs = await listPrograms(uid);
+  // v31: hidden programs don't count when guessing which program to show.
+  const all = await listPrograms(uid);
+  const programs = all.some((p) => p.hidden !== true) ? all.filter((p) => p.hidden !== true) : all;
   if (programs.length === 1) {
     return { program: programs[0], run: null, multipleUnresolved: false };
   }

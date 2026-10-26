@@ -36,6 +36,20 @@ export function basisLabel(exerciseId, ownDisplayName) {
   return ownDisplayName || exerciseId || 'this exercise';
 }
 
+/**
+ * v32: a readable name for the lift a percentage is taken from, for the
+ * Workout screen's target line — the four starter lifts by their label, the
+ * exercise's own name when the % is of itself, otherwise the id made readable
+ * ("romanian-deadlift" → "Romanian Deadlift"). Never the raw internal id.
+ */
+export function readableBasisName(basisExerciseId, ex) {
+  if (!basisExerciseId) return 'this exercise';
+  const known = REQUIRED_STARTER_LIFTS.find((l) => l.id === basisExerciseId);
+  if (known) return known.label;
+  if (ex?.exerciseId === basisExerciseId && ex?.displayNameAtStart) return ex.displayNameAtStart;
+  return String(basisExerciseId).split(/[-_\s]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
 /** 1 decimal place — matches the program's own stored percentage precision (e.g. 0.7317 -> 73.2) without rounding away a meaningful digit. */
 export function formatPercent(fraction) {
   return Math.round((fraction ?? 0) * 1000) / 10;
@@ -101,4 +115,26 @@ export function warmupStepsText(load, ownDisplayName) {
     missing: false,
     steps: (load.sets ?? []).map((s) => ({ kg: s.kg ?? null, reps: s.reps ?? null })),
   };
+}
+
+/**
+ * v32 — the day's main set for Home's "Next Workout" card, e.g.
+ * "Deadlift 5×3 @ 150 kg": the first MAIN exercise that isn't a warm-up ramp,
+ * from an already-resolved exercise list (workoutSnapshot.buildResolvedExerciseList,
+ * so the kg are this lifter's own, for this week). null when there's nothing to show.
+ */
+export function mainSetSummary(resolvedExercises) {
+  const ex = (resolvedExercises ?? []).find((e) => e?.section === 'main' && e.load?.type !== 'sets');
+  if (!ex) return null;
+  const p = ex.prescribed ?? {};
+  const reps = p.durationSec != null && p.reps == null ? `${p.durationSec}s` : formatReps(p.reps);
+  const volume = typeof p.sets === 'number' ? `${p.sets}×${reps}` : reps;
+  const l = ex.load ?? {};
+  let kg = null;
+  if (l.type === 'percent' && l.displayTargetKg != null) kg = `${l.displayTargetKg} kg`;
+  else if (l.type === 'percentRange' && Array.isArray(l.displayRangeKg)) {
+    kg = l.displayRangeKg[0] === l.displayRangeKg[1] ? `${l.displayRangeKg[0]} kg` : `${l.displayRangeKg[0]}–${l.displayRangeKg[1]} kg`;
+  } else if (l.type === 'fixed' && l.kg != null) kg = `${l.kg} kg${l.perHand ? ' / hand' : ''}`;
+  else if (l.type === 'bodyweight') kg = 'bodyweight';
+  return `${ex.displayNameAtStart} ${volume}${kg ? ` @ ${kg}` : ''}`;
 }

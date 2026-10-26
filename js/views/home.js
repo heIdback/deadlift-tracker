@@ -11,6 +11,9 @@ import { escapeHtml } from '../utils/dom.js';
 // v1.1: week count from the program's own `weeks` (an imported program need
 // not be 8 weeks long) — the same helper Program view already uses.
 import { totalWeeksOf } from '../utils/programEditModel.js';
+// v32: the next workout's main set on the "Next Workout" card.
+import { buildResolvedExerciseList } from '../utils/workoutSnapshot.js';
+import { mainSetSummary } from '../utils/programDisplay.js';
 import {
   loadHomeInsights, suggestionsHtml, goalCardHtml, wireInsights,
 } from './homeInsights.js';
@@ -37,9 +40,9 @@ export async function mount(root) {
       ? `
         <section class="empty-state">
           <h2>Multiple programs found</h2>
-          <p>None is currently active. A program picker is coming in a later
-          phase — for now, start one from Profile to make it active.</p>
-          <a class="btn btn-primary" href="#/profile">Go to Profile</a>
+          <p>None is currently active. Open the Program tab, pick a program and
+          choose <strong>Set Active</strong>.</p>
+          <a class="btn btn-primary" href="#/program">Go to Program</a>
         </section>`
       : `
         <section class="empty-state">
@@ -64,6 +67,18 @@ export async function mount(root) {
   const dayOrder = run ? run.current.dayOrder : 1;
   const nextDay = days.find((d) => d.order === dayOrder) ?? days[0];
   const weekMeta = program.weeks?.find((w) => w.week === weekOfEight);
+  // v32: e.g. "Deadlift 5×3 @ 150 kg" — this lifter's own 1RMs, this week.
+  let nextMainSet = null;
+  if (!inProgress && nextDay && weekOfEight <= (totalWeeksOf(program) || weekOfEight)) {
+    try {
+      nextMainSet = mainSetSummary(buildResolvedExerciseList(nextDay, weekOfEight, {
+        currentMaxes: profile?.currentMaxes ?? {},
+        rounding: profile?.settings?.rounding ?? {},
+      }));
+    } catch (err) {
+      console.warn('home: could not summarise the next workout', err);
+    }
+  }
 
   // "This Week" = current calendar week, Monday 00:00 local time through now
   // (not a rolling 7 days, not UTC midnight). Same local-midnight
@@ -102,6 +117,7 @@ export async function mount(root) {
       <div class="card card-action">
         <div class="card-label">${inProgress ? 'Workout In Progress' : 'Next Workout'}</div>
         <h2 class="card-title">${inProgress ? escapeHtml(inProgress.dayName) || 'Resume session' : escapeHtml(nextDay?.name) || '—'}</h2>
+        ${nextMainSet ? `<div class="card-sub next-main-set">${escapeHtml(nextMainSet)}</div>` : ''}
         <button class="btn btn-primary btn-large" id="start-workout-btn">
           ${inProgress ? 'RESUME WORKOUT' : 'START WORKOUT'}
         </button>

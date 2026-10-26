@@ -57,7 +57,7 @@ export const SUPPORTED_BACKUP_SCHEMA_VERSION = 1;
 // added — additive fields an imported program carries (js/services/programService.js's importProgram).
 // An older backup simply won't have them; without them here, restoring a
 // NEW backup would silently drop an imported program's version label.
-const PROGRAM_FIELDS = ['schemaVersion', 'name', 'sourceFile', 'roundingRules', 'weeks', 'exerciseLibrary', 'importReviewFlags', 'createdAt', 'updatedAt', 'version', 'importSource', 'importedAt', 'notes', 'decisionRules', 'generatedBy', 'currentOneRepMaxesAtImport'];
+const PROGRAM_FIELDS = ['schemaVersion', 'name', 'sourceFile', 'roundingRules', 'weeks', 'exerciseLibrary', 'importReviewFlags', 'createdAt', 'updatedAt', 'version', 'importSource', 'importedAt', 'notes', 'decisionRules', 'generatedBy', 'currentOneRepMaxesAtImport', 'hidden', 'backupOfProgramId'];
 const PROGRAM_RUN_FIELDS = ['programId', 'startDate', 'current', 'status', 'overrides', 'activeWorkoutId', 'programCompleted', 'programCompletedAt'];
 // Phase 4.1: 'completionState'/'lastEditedAt' added — both purely additive
 // (an old backup simply won't have them; History/Progress already treat a

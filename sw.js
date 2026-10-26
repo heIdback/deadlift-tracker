@@ -384,6 +384,17 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
+// v32 — Workout screen: progress "done/total" per exercise + total sets,
+// finished exercises collapse, −2.5/+2.5 kg, bigger inputs, screen kept on
+// while logging (Wake Lock), target line shows exercise names; Home shows the
+// next workout's main set; messages point to the Program tab. NEW modules
+// js/core/wakeLock.js + js/utils/workoutProgress.js, listed below.
+//
+// v31 — Program: Hide / Unhide / Delete for inactive programs. NEW modules
+// js/services/programManageService.js + js/utils/programManage.js (statically
+// imported by views/program.js), listed below; program.js, programImport.js,
+// programService.js, restorePlan.js and css/views.css changed.
+//
 // v30 — Program Import → "Update a program you already have" (keeps the
 // program id and its run position; saves a copy of the old version first):
 // NEW modules js/services/programUpdateService.js + js/utils/programUpdate.js
@@ -413,7 +424,7 @@
 // js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
 // + views/workout.js) and is listed below; workoutService.js and
 // views/workout.js changed, so the shell cache name changes too.
-const CACHE_VERSION = 'v30';
+const CACHE_VERSION = 'v32';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -439,6 +450,7 @@ const SHELL_MODULES = [
   'js/core/pwa.js',
   'js/core/router.js',
   'js/core/sync-status.js',
+  'js/core/wakeLock.js',
   'js/services/accessAdminService.js',
   'js/services/adminInsightsService.js',
   'js/services/adminResetService.js',
@@ -446,6 +458,7 @@ const SHELL_MODULES = [
   'js/services/exportService.js',
   'js/services/measurementService.js',
   'js/services/programEditService.js',
+  'js/services/programManageService.js',
   'js/services/programService.js',
   'js/services/programUpdateService.js',
   'js/services/programSwitchService.js',
@@ -472,6 +485,7 @@ const SHELL_MODULES = [
   'js/utils/programDisplay.js',
   'js/utils/programEditModel.js',
   'js/utils/programImport.js',
+  'js/utils/programManage.js',
   'js/utils/programProgress.js',
   'js/utils/programSwitch.js',
   'js/utils/programUpdate.js',
@@ -487,6 +501,7 @@ const SHELL_MODULES = [
   'js/utils/trainingReset.js',
   'js/utils/validation.js',
   'js/utils/workoutCompletion.js',
+  'js/utils/workoutProgress.js',
   'js/utils/workoutSnapshot.js',
   'js/views/admin.js',
   'js/views/adminReset.js',
