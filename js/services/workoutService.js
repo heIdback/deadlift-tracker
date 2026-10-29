@@ -518,6 +518,22 @@ export async function getPreviousPerformance(uid, workout) {
 }
 
 /**
+ * v33 — finished workouts with finishedAt in [from, to) (History calendar,
+ * months older than the list already loaded). Uses the existing
+ * status ASC + finishedAt ASC index; pre-reset workouts are hidden.
+ */
+export async function listCompletedWorkoutsBetween(uid, from, to) {
+  const q = query(
+    workoutsCol(uid),
+    where('status', '==', 'completed'),
+    where('finishedAt', '>=', from),
+    where('finishedAt', '<', to),
+  );
+  const snap = await getDocsSafe(q);
+  return hideArchived(uid, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+}
+
+/**
  * Clears the local same-browser "active workout" marker (see `localKey`/
  * `writeLocalActiveId` above) without writing a new one. Exported for
  * restoreService.js (Phase 3F): after a JSON restore, any pre-restore
@@ -1193,10 +1209,15 @@ export async function reconcileLegacyProgramPosition(uid, run) {
     where('programId', '==', run.programId),
     where('week', '==', run.current.week),
     where('dayOrder', '==', run.current.dayOrder),
-    ...(training ? [] : [limit(1)]),
   );
   const snap = await getDocsSafe(q);
-  if (!snap.docs.some((d) => !isArchivedWorkout(d.data(), training))) return run; // current position isn't already done — nothing to reconcile
+  // v33: only a workout of THIS run counts. Since "Start a new cycle" a
+  // program can have several runs, and the previous cycle's Week 1 Day 1 must
+  // not push the new cycle forward. Workouts carry programRunId; very old
+  // ones without it count only if finished after this run started.
+  const startMs = toMillis(run.startDate);
+  const ofThisRun = (w) => (w.programRunId ? w.programRunId === run.id : !startMs || (toMillis(w.finishedAt) ?? 0) >= startMs);
+  if (!snap.docs.some((d) => !isArchivedWorkout(d.data(), training) && ofThisRun(d.data()))) return run; // current position isn't already done — nothing to reconcile
 
   const [days, program] = await Promise.all([
     getProgramDays(uid, run.programId),

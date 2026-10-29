@@ -652,3 +652,49 @@
   .set-check { min-width: 44px; }
 }
 .next-main-set { font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2); }
+
+/* v33 — summary after FINISH WORKOUT (js/views/workout.js showFinishSummary). */
+.summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin-top: var(--space-3); }
+.summary-stats .stat-card { padding: var(--space-2); text-align: center; }
+.summary-stats .stat-value { font-size: 1.15rem; overflow-wrap: anywhere; }
+#summary-prs li, #summary-compare li { overflow-wrap: anywhere; margin-bottom: var(--space-1); }
+
+/* v33 — "Program completed" card (js/views/programCompleteCard.js). */
+.cycle-table { display: flex; flex-direction: column; gap: 2px; margin: var(--space-2) 0 var(--space-3); }
+.cycle-row { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.cycle-row:last-child { border-bottom: none; }
+.cycle-head { color: var(--text-secondary); font-size: 0.8rem; }
+.cycle-up { color: var(--success); font-weight: 600; }
+.cycle-down { color: var(--danger); font-weight: 600; }
+#new-cycle-form { margin-top: var(--space-3); }
+
+/* v33 — History month calendar (js/views/history.js mountCalendar). */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+.cal-title { font-weight: 700; }
+.cal-nav { min-width: 44px; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-primary); font-size: 1.3rem; cursor: pointer; }
+.cal-nav:disabled { opacity: 0.35; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-weekday { text-align: center; font-size: 0.7rem; color: var(--text-secondary); padding-bottom: 2px; }
+.cal-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px;
+  min-height: 42px; min-width: 0; padding: 4px 0; border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.85rem;
+}
+.cal-cell.has-workout { background: var(--surface); border-color: var(--border); color: var(--text-primary); cursor: pointer; }
+.cal-cell.is-today { border-color: var(--accent); }
+.cal-cell:disabled { cursor: default; }
+.cal-dots { display: flex; gap: 2px; min-height: 7px; }
+.cal-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--text-tertiary); }
+.cal-dot.is-complete { background: var(--success); }
+.cal-dot.is-partial { background: var(--accent); }
+.cal-dot.is-skipped { background: var(--text-tertiary); }
+.cal-legend { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; font-size: 0.75rem; margin-top: var(--space-2); }
+.cal-legend .cal-dot { margin-left: var(--space-2); }
+.cal-legend .cal-dot:first-child { margin-left: 0; }
+
+/* v33 — Progress: relative strength. */
+.rs-headline { display: flex; align-items: baseline; gap: var(--space-2); margin: var(--space-1) 0; }
+.rs-lift { font-weight: 600; }
+.rs-ratio { font-family: var(--font-display); font-size: 1.6rem; color: var(--text-primary); }
+.rs-others { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: 0.85rem; color: var(--text-secondary); }
+.rs-others strong { color: var(--text-primary); }

@@ -4,7 +4,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { db } from '../core/firebase.js';
 import { trackWrite } from '../core/sync-status.js';
-import { getDocSafe } from '../utils/firestoreRead.js';
+import { getDocSafe, getDocsSafe } from '../utils/firestoreRead.js';
 import { isOfflineUnavailableError } from '../utils/offlineError.js';
 import { DEFAULTS, APP_META } from '../../config/app.config.js';
 import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
@@ -149,6 +149,13 @@ export async function getMissingRequiredMaxes(uid) {
   const profile = await getUserProfile(uid);
   const have = profile?.currentMaxes || {};
   return REQUIRED_STARTER_LIFTS.filter((l) => !have[l.id]).map((l) => l.id);
+}
+
+/** v33: every 1RM history entry (all lifts; the collection is small), archived ones hidden. */
+export async function getAllMaxHistory(uid) {
+  const snap = await getDocsSafe(maxesColRef(uid));
+  const { training } = await getResetBoundaries(uid);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => !isArchivedMax(d, training));
 }
 
 export async function getMaxHistory(uid, exerciseId, max = 20) {

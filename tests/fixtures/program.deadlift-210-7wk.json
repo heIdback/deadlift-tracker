@@ -1,0 +1,1569 @@
+{
+  "schemaVersion": 1,
+  "id": "deadlift-210-7wk",
+  "name": "Deadlift 210 (7-Week Block)",
+  "sourceFile": "Claude plan 2026-09-28",
+  "generatedBy": "build_program.py",
+  "roundingRules": {
+    "barbell": 2.5,
+    "dumbbell": 1,
+    "machine": 2.5,
+    "bodyweight": 0
+  },
+  "currentOneRepMaxesAtImport": {
+    "deadlift": 205.0,
+    "back-squat": 160.0
+  },
+  "importReviewFlags": [],
+  "weeks": [
+    {
+      "week": 1,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Ponovni ulazak nakon testa",
+      "deadliftNotesFromBlock": "RPE 6"
+    },
+    {
+      "week": 2,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Akumulacija",
+      "deadliftNotesFromBlock": "RPE 6-7"
+    },
+    {
+      "week": 3,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Akumulacija",
+      "deadliftNotesFromBlock": "RPE 7"
+    },
+    {
+      "week": 4,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Akumulacija",
+      "deadliftNotesFromBlock": "RPE 7,5"
+    },
+    {
+      "week": 5,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Intenzifikacija",
+      "deadliftNotesFromBlock": "RPE 8"
+    },
+    {
+      "week": 6,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": false,
+      "focusFromOverview": "Teški single + smanjenje volumena",
+      "deadliftNotesFromBlock": "Single RPE 7-8"
+    },
+    {
+      "week": 7,
+      "cycle": 1,
+      "isDeload": false,
+      "isPrAttempt": true,
+      "focusFromOverview": "Test",
+      "deadliftNotesFromBlock": "PR Day"
+    }
+  ],
+  "exerciseLibrary": [
+    {
+      "id": "deadlift",
+      "name": "Deadlift",
+      "aliases": [
+        "Deadlift"
+      ],
+      "cue": null
+    },
+    {
+      "id": "deficit-deadlift",
+      "name": "Deficit Deadlift",
+      "aliases": [
+        "Deficit Deadlift"
+      ],
+      "cue": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL."
+    },
+    {
+      "id": "paused-deadlift",
+      "name": "Paused Deadlift",
+      "aliases": [
+        "Paused Deadlift"
+      ],
+      "cue": "Pauza 2–3 cm od poda, 2 s, bez gubitka pozicije."
+    },
+    {
+      "id": "leg-press-high-foot",
+      "name": "Leg Press High Foot",
+      "aliases": [
+        "Leg Press High Foot"
+      ],
+      "cue": null
+    },
+    {
+      "id": "core-ab-wheel",
+      "name": "Ab Wheel",
+      "aliases": [
+        "Ab Wheel"
+      ],
+      "cue": null
+    },
+    {
+      "id": "db-bench-press",
+      "name": "DB Bench Press",
+      "aliases": [
+        "DB Bench Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "chest-supported-row",
+      "name": "Chest Supported Row",
+      "aliases": [
+        "Chest Supported Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "landmine-press",
+      "name": "Landmine Press",
+      "aliases": [
+        "Landmine Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "db-row",
+      "name": "DB Row",
+      "aliases": [
+        "DB Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "face-pulls",
+      "name": "Face Pulls",
+      "aliases": [
+        "Face Pulls"
+      ],
+      "cue": null
+    },
+    {
+      "id": "rope-triceps-pushdown",
+      "name": "Rope Triceps Pushdown",
+      "aliases": [
+        "Rope Triceps Pushdown"
+      ],
+      "cue": null
+    },
+    {
+      "id": "back-squat",
+      "name": "Back Squat",
+      "aliases": [
+        "Back Squat"
+      ],
+      "cue": null
+    },
+    {
+      "id": "bulgarian-split-squat",
+      "name": "Bulgarian Split Squat",
+      "aliases": [
+        "Bulgarian Split Squat"
+      ],
+      "cue": null
+    },
+    {
+      "id": "hamstring-curl",
+      "name": "Hamstring Curl",
+      "aliases": [
+        "Hamstring Curl"
+      ],
+      "cue": null
+    },
+    {
+      "id": "core-plank",
+      "name": "Plank",
+      "aliases": [
+        "Plank"
+      ],
+      "cue": null
+    },
+    {
+      "id": "pendlay-row",
+      "name": "Pendlay Row",
+      "aliases": [
+        "Pendlay Row"
+      ],
+      "cue": null
+    },
+    {
+      "id": "incline-db-press",
+      "name": "Incline DB Press",
+      "aliases": [
+        "Incline DB Press"
+      ],
+      "cue": null
+    },
+    {
+      "id": "straight-arm-pulldown",
+      "name": "Straight Arm Pulldown",
+      "aliases": [
+        "Straight Arm Pulldown"
+      ],
+      "cue": null
+    },
+    {
+      "id": "back-extension-45",
+      "name": "45° Back Extension",
+      "aliases": [
+        "45° Back Extension"
+      ],
+      "cue": null
+    },
+    {
+      "id": "lateral-raise",
+      "name": "Lateral Raise",
+      "aliases": [
+        "Lateral Raise"
+      ],
+      "cue": null
+    },
+    {
+      "id": "reverse-curl",
+      "name": "Reverse Curl",
+      "aliases": [
+        "Reverse Curl"
+      ],
+      "cue": null
+    }
+  ],
+  "days": [
+    {
+      "id": "dl210-day1-deadlift",
+      "order": 1,
+      "name": "Lower A (Deadlift)",
+      "sections": {
+        "warmup": {
+          "source": "program",
+          "text": "3 min bicikl, Cat-Camel 2×8, Glute Bridge 2×15, Hip Opener 30 s/str, RDL sa štapom 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "structure": "block-driven",
+            "weeklyVariants": [
+              {
+                "week": 6,
+                "isDeload": false,
+                "isPrAttempt": false,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.9268,
+                    "of": "deadlift"
+                  },
+                  "sourceWeightKgAtImport": 190.0
+                },
+                "backoff": {
+                  "sets": 2,
+                  "reps": 2,
+                  "load": {
+                    "type": "percent",
+                    "percent": 0.8293,
+                    "of": "deadlift"
+                  },
+                  "note": "Back-off nakon singla."
+                },
+                "sgdl": {
+                  "sets": 0,
+                  "note": "Nema"
+                },
+                "notes": "Single RPE 7-8. Brz s poda = cilj 210 u 7. tjednu. Sporiji (RPE 8,5) = cilj 205-207,5.",
+                "warmupSets": [
+                  {
+                    "kg": 60.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 165.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 180.0,
+                    "reps": 1
+                  }
+                ]
+              },
+              {
+                "week": 7,
+                "isDeload": false,
+                "isPrAttempt": true,
+                "topSingle": {
+                  "sets": 1,
+                  "reps": 1,
+                  "load": {
+                    "type": "percent",
+                    "percent": 1.0244,
+                    "of": "deadlift"
+                  },
+                  "sourceWeightKgAtImport": 210.0
+                },
+                "backoff": {
+                  "sets": null,
+                  "reps": null,
+                  "load": {
+                    "type": "none"
+                  },
+                  "note": null
+                },
+                "sgdl": {
+                  "sets": 0,
+                  "note": "Nema"
+                },
+                "notes": "TEST. Odlučuje 197,5: RPE ≤7,5 → 210 | RPE 8 → 207,5 (PR) | RPE 9+ → stani. Nakon promašaja nema ponovnog pokušaja na istoj kilaži.",
+                "warmupSets": [
+                  {
+                    "kg": 60.0,
+                    "reps": 5
+                  },
+                  {
+                    "kg": 100.0,
+                    "reps": 3
+                  },
+                  {
+                    "kg": 140.0,
+                    "reps": 2
+                  },
+                  {
+                    "kg": 165.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 185.0,
+                    "reps": 1
+                  },
+                  {
+                    "kg": 197.5,
+                    "reps": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift — Warm-up",
+            "sets": 3,
+            "reps": null,
+            "durationSec": null,
+            "load": {
+              "type": "sets",
+              "sets": [
+                {
+                  "kg": 60.0,
+                  "reps": 5
+                },
+                {
+                  "kg": 100.0,
+                  "reps": 3
+                },
+                {
+                  "kg": 125.0,
+                  "reps": 2
+                }
+              ]
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "sets": 4,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.7073,
+              "of": "deadlift"
+            },
+            "notes": "Ako je 1. serija teža od zadanog RPE-a ili spora s poda, ostale serije -5 kg. Cue: gurni pod, lat zaključan, šipka uz noge.",
+            "rpe": 6,
+            "rir": null,
+            "weeks": [
+              1
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift — Warm-up",
+            "sets": 4,
+            "reps": null,
+            "durationSec": null,
+            "load": {
+              "type": "sets",
+              "sets": [
+                {
+                  "kg": 60.0,
+                  "reps": 5
+                },
+                {
+                  "kg": 100.0,
+                  "reps": 3
+                },
+                {
+                  "kg": 130.0,
+                  "reps": 2
+                },
+                {
+                  "kg": 145.0,
+                  "reps": 1
+                }
+              ]
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              2
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "sets": 5,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.7561,
+              "of": "deadlift"
+            },
+            "notes": "Ako je 1. serija teža od zadanog RPE-a ili spora s poda, ostale serije -5 kg. Cue: gurni pod, lat zaključan, šipka uz noge.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              2
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift — Warm-up",
+            "sets": 4,
+            "reps": null,
+            "durationSec": null,
+            "load": {
+              "type": "sets",
+              "sets": [
+                {
+                  "kg": 60.0,
+                  "reps": 5
+                },
+                {
+                  "kg": 100.0,
+                  "reps": 3
+                },
+                {
+                  "kg": 130.0,
+                  "reps": 2
+                },
+                {
+                  "kg": 150.0,
+                  "reps": 1
+                }
+              ]
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              3
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "sets": 5,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.7927,
+              "of": "deadlift"
+            },
+            "notes": "Ako je 1. serija teža od zadanog RPE-a ili spora s poda, ostale serije -5 kg. Cue: gurni pod, lat zaključan, šipka uz noge.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              3
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift — Warm-up",
+            "sets": 4,
+            "reps": null,
+            "durationSec": null,
+            "load": {
+              "type": "sets",
+              "sets": [
+                {
+                  "kg": 60.0,
+                  "reps": 5
+                },
+                {
+                  "kg": 100.0,
+                  "reps": 3
+                },
+                {
+                  "kg": 135.0,
+                  "reps": 2
+                },
+                {
+                  "kg": 155.0,
+                  "reps": 1
+                }
+              ]
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              4
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "sets": 4,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.8293,
+              "of": "deadlift"
+            },
+            "notes": "Ako je 1. serija teža od zadanog RPE-a ili spora s poda, ostale serije -5 kg. Cue: gurni pod, lat zaključan, šipka uz noge.",
+            "rpe": 7.5,
+            "rir": null,
+            "weeks": [
+              4
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift — Warm-up",
+            "sets": 5,
+            "reps": null,
+            "durationSec": null,
+            "load": {
+              "type": "sets",
+              "sets": [
+                {
+                  "kg": 60.0,
+                  "reps": 5
+                },
+                {
+                  "kg": 100.0,
+                  "reps": 3
+                },
+                {
+                  "kg": 140.0,
+                  "reps": 2
+                },
+                {
+                  "kg": 160.0,
+                  "reps": 1
+                },
+                {
+                  "kg": 170.0,
+                  "reps": 1
+                }
+              ]
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              5
+            ]
+          },
+          {
+            "exerciseId": "deadlift",
+            "displayName": "Deadlift",
+            "sets": 3,
+            "reps": 2,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.8659,
+              "of": "deadlift"
+            },
+            "notes": "Ako je 1. serija teža od zadanog RPE-a ili spora s poda, ostale serije -5 kg. Cue: gurni pod, lat zaključan, šipka uz noge.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              5
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "deficit-deadlift",
+            "displayName": "Deficit Deadlift (3–5 cm)",
+            "sets": 3,
+            "reps": 4,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6098,
+              "of": "deadlift"
+            },
+            "notes": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL, bez trzaja s poda.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              1
+            ]
+          },
+          {
+            "exerciseId": "deficit-deadlift",
+            "displayName": "Deficit Deadlift (3–5 cm)",
+            "sets": 3,
+            "reps": 4,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6341,
+              "of": "deadlift"
+            },
+            "notes": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL, bez trzaja s poda.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              2
+            ]
+          },
+          {
+            "exerciseId": "deficit-deadlift",
+            "displayName": "Deficit Deadlift (3–5 cm)",
+            "sets": 3,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6707,
+              "of": "deadlift"
+            },
+            "notes": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL, bez trzaja s poda.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              3
+            ]
+          },
+          {
+            "exerciseId": "deficit-deadlift",
+            "displayName": "Deficit Deadlift (3–5 cm)",
+            "sets": 3,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6951,
+              "of": "deadlift"
+            },
+            "notes": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL, bez trzaja s poda.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              4
+            ]
+          },
+          {
+            "exerciseId": "deficit-deadlift",
+            "displayName": "Deficit Deadlift (3–5 cm)",
+            "sets": 2,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6829,
+              "of": "deadlift"
+            },
+            "notes": "Stoj na ploči 3–5 cm. Ista pozicija kao pravi DL, bez trzaja s poda.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              5
+            ]
+          },
+          {
+            "exerciseId": "leg-press-high-foot",
+            "displayName": "Leg Press (High Foot Placement)",
+            "sets": 3,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "exerciseId": "leg-press-high-foot",
+            "displayName": "Leg Press (High Foot Placement)",
+            "sets": 2,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              6
+            ]
+          },
+          {
+            "exerciseId": "core-ab-wheel",
+            "displayName": "Ab Wheel",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Bracing, bez prepuštanja lumbalno.",
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "dl210-day2-upper-a",
+      "order": 2,
+      "name": "Upper A (Push)",
+      "sections": {
+        "warmup": {
+          "source": "program",
+          "text": "Band Pull-Apart 2×15, External Rotation 2×15, Arm Circles 2×10, Push-up Plus 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "db-bench-press",
+            "displayName": "DB Bench Press",
+            "sets": 4,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": "Kad sve 4 serije dođu do 10, +2 kg po bučici. Neutralni hvat ako lijevo rame reagira.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "db-bench-press",
+            "displayName": "DB Bench Press",
+            "sets": 3,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": null,
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "chest-supported-row",
+            "displayName": "Chest-supported Row (Neutral Grip)",
+            "sets": 4,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 60,
+              "perHand": false
+            },
+            "notes": "Gurtne.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "chest-supported-row",
+            "displayName": "Chest-supported Row (Neutral Grip)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 60,
+              "perHand": false
+            },
+            "notes": "Gurtne.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          },
+          {
+            "exerciseId": "landmine-press",
+            "displayName": "Landmine Press",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 27.5,
+              "perHand": false
+            },
+            "notes": null,
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "landmine-press",
+            "displayName": "Landmine Press",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 27.5,
+              "perHand": false
+            },
+            "notes": null,
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          },
+          {
+            "exerciseId": "db-row",
+            "displayName": "DB Row",
+            "sets": 3,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": "Gurtne.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "db-row",
+            "displayName": "DB Row",
+            "sets": 2,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": "Gurtne.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          },
+          {
+            "exerciseId": "face-pulls",
+            "displayName": "Face Pulls",
+            "sets": 3,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "rope-triceps-pushdown",
+            "displayName": "Rope Triceps Pushdown (Neutral Grip)",
+            "sets": 3,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Laktovi uz tijelo, bez forsiranja lakta.",
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "rope-triceps-pushdown",
+            "displayName": "Rope Triceps Pushdown (Neutral Grip)",
+            "sets": 2,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "program",
+          "text": "Chest, Shoulder, Triceps Stretch – 30 s svaki"
+        }
+      }
+    },
+    {
+      "id": "dl210-day3-lower-b",
+      "order": 3,
+      "name": "Lower B (Squat + Paused DL)",
+      "sections": {
+        "warmup": {
+          "source": "program",
+          "text": "Leg Swings 2×10, Air Squats 2×10, Hip Band Walks 2×10, Ankle Rock 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "back-squat",
+            "displayName": "Back Squat",
+            "structure": "week-percent-range",
+            "setsReps": {
+              "1": "3x5",
+              "2": "4x5",
+              "3": "4x5",
+              "4": "4x4",
+              "5": "4x3",
+              "6": "3x3",
+              "7": "3x5"
+            },
+            "weeklyVariants": [
+              {
+                "week": 1,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6875,
+                  "max": 0.6875
+                }
+              },
+              {
+                "week": 2,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.7188,
+                  "max": 0.7188
+                }
+              },
+              {
+                "week": 3,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.75,
+                  "max": 0.75
+                }
+              },
+              {
+                "week": 4,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.7969,
+                  "max": 0.7969
+                }
+              },
+              {
+                "week": 5,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.8281,
+                  "max": 0.8281
+                }
+              },
+              {
+                "week": 6,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.75,
+                  "max": 0.75
+                }
+              },
+              {
+                "week": 7,
+                "load": {
+                  "type": "percentRange",
+                  "min": 0.6875,
+                  "max": 0.6875
+                }
+              }
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 3,
+            "reps": 2,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.561,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              1
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 3,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.5854,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              2
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 3,
+            "reps": 3,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6098,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              3
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 3,
+            "reps": 2,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6463,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              4
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 3,
+            "reps": 2,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.6585,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              5
+            ]
+          },
+          {
+            "exerciseId": "paused-deadlift",
+            "displayName": "Paused Deadlift (2–3 cm, 2 s)",
+            "sets": 2,
+            "reps": 2,
+            "durationSec": null,
+            "load": {
+              "type": "percent",
+              "percent": 0.5854,
+              "of": "deadlift"
+            },
+            "notes": "Pauza 2–3 cm od poda, 2 s. Leđa i lat napeti, ramena iznad šipke. Kilaža nije cilj.",
+            "rpe": 6.5,
+            "rir": null,
+            "weeks": [
+              6
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "bulgarian-split-squat",
+            "displayName": "Bulgarian Split Squat",
+            "sets": 3,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Po nozi.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "exerciseId": "bulgarian-split-squat",
+            "displayName": "Bulgarian Split Squat",
+            "sets": 2,
+            "reps": 8,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Po nozi.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "hamstring-curl",
+            "displayName": "Hamstring Curl",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "core-plank",
+            "displayName": "Plank",
+            "sets": 3,
+            "reps": null,
+            "durationSec": 45,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "program",
+          "text": "Quad, Glute, Hamstring, Calf Stretch – 30 s svaki"
+        }
+      }
+    },
+    {
+      "id": "dl210-day4-upper-b",
+      "order": 4,
+      "name": "Upper B (Pull)",
+      "sections": {
+        "warmup": {
+          "source": "program",
+          "text": "Band Rows 2×15, Scapular Pull-Up 2×10, Shoulder Dislocates 2×10, Wrist Circles 2×10"
+        },
+        "main": [
+          {
+            "exerciseId": "pendlay-row",
+            "displayName": "Pendlay Row",
+            "sets": 4,
+            "reps": 6,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Gurtne. Eksplozivno, šipka se vraća na pod svaki rep.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "pendlay-row",
+            "displayName": "Pendlay Row",
+            "sets": 3,
+            "reps": 6,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Gurtne.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          }
+        ],
+        "accessory": [
+          {
+            "exerciseId": "incline-db-press",
+            "displayName": "Incline DB Press (low incline)",
+            "sets": 3,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": "Samo u bezbolnom opsegu za lijevo rame.",
+            "rpe": 8,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "exerciseId": "incline-db-press",
+            "displayName": "Incline DB Press (low incline)",
+            "sets": 2,
+            "reps": {
+              "min": 6,
+              "max": 10
+            },
+            "durationSec": null,
+            "load": {
+              "type": "fixed",
+              "kg": 40,
+              "perHand": true
+            },
+            "notes": null,
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              7
+            ]
+          },
+          {
+            "exerciseId": "straight-arm-pulldown",
+            "displayName": "Straight-arm Pulldown",
+            "sets": 3,
+            "reps": 12,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Osjeti lat 'zaključavanje' kao na početku deadlifta.",
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "back-extension-45",
+            "displayName": "45° Back Extension",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 12
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Kontrolirano, 1 s pauze gore.",
+            "rpe": 7,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "exerciseId": "back-extension-45",
+            "displayName": "45° Back Extension",
+            "sets": 2,
+            "reps": 10,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Lagano.",
+            "rpe": 6,
+            "rir": null,
+            "weeks": [
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "lateral-raise",
+            "displayName": "Lateral Raise",
+            "sets": 3,
+            "reps": {
+              "min": 12,
+              "max": 15
+            },
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "reverse-curl",
+            "displayName": "Reverse Curl (Light)",
+            "sets": 2,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": "Dlanovi prema dolje, lagano.",
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "exerciseId": "face-pulls",
+            "displayName": "Face Pulls",
+            "sets": 2,
+            "reps": 15,
+            "durationSec": null,
+            "load": {
+              "type": "none"
+            },
+            "notes": null,
+            "rpe": null,
+            "rir": null,
+            "weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          }
+        ],
+        "cooldown": {
+          "source": "program",
+          "text": "Lat, Wrist, Trap Stretch – ukupno 2 min"
+        }
+      }
+    }
+  ]
+}

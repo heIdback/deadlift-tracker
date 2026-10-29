@@ -384,6 +384,11 @@
 //   - Precache fix: js/utils/exportFlatten.js is reachable (profile.js →
 //     exportService.js re-export) and is now listed below; the old comment
 //     calling it dead code was wrong, so Profile could fail to load offline.
+// v33 — Summary after FINISH WORKOUT, "Program completed" card with a new
+// cycle, History month calendar, Progress "Relative strength". NEW modules
+// js/utils/{workoutSummary,programCycle,historyCalendar}.js and
+// js/views/programCompleteCard.js, listed below.
+//
 // v32 — Workout screen: progress "done/total" per exercise + total sets,
 // finished exercises collapse, −2.5/+2.5 kg, bigger inputs, screen kept on
 // while logging (Wake Lock), target line shows exercise names; Home shows the
@@ -424,7 +429,7 @@
 // js/utils/skipAhead.js is a NEW statically imported module (workoutService.js
 // + views/workout.js) and is listed below; workoutService.js and
 // views/workout.js changed, so the shell cache name changes too.
-const CACHE_VERSION = 'v32';
+const CACHE_VERSION = 'v33';
 const CACHE_PREFIX = 'deadlift-tracker-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 
@@ -478,11 +483,13 @@ const SHELL_MODULES = [
   'js/utils/exportFlatten.js',
   'js/utils/exportSerialize.js',
   'js/utils/firestoreRead.js',
+  'js/utils/historyCalendar.js',
   'js/utils/liftGoal.js',
   'js/utils/maxHistoryAnalytics.js',
   'js/utils/oneRmSuggestion.js',
   'js/utils/offlineError.js',
   'js/utils/programDisplay.js',
+  'js/utils/programCycle.js',
   'js/utils/programEditModel.js',
   'js/utils/programImport.js',
   'js/utils/programManage.js',
@@ -503,6 +510,7 @@ const SHELL_MODULES = [
   'js/utils/workoutCompletion.js',
   'js/utils/workoutProgress.js',
   'js/utils/workoutSnapshot.js',
+  'js/utils/workoutSummary.js',
   'js/views/admin.js',
   'js/views/adminReset.js',
   'js/views/adminUserDetail.js',
@@ -518,6 +526,7 @@ const SHELL_MODULES = [
   'js/views/pending.js',
   'js/views/profile.js',
   'js/views/program.js',
+  'js/views/programCompleteCard.js',
   'js/views/programDayEditor.js',
   'js/views/programImport.js',
   'js/views/progress.js',

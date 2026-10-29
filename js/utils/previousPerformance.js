@@ -25,7 +25,8 @@ export const PREVIOUS_LOOKBACK = 30;
 const LOGGED = new Set([SET_STATUS.COMPLETED, SET_STATUS.MODIFIED, SET_STATUS.FAILED]);
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
-const roleOf = (ex) => (ex?.section === 'warmup' ? 'warmup' : 'main');
+// v33: a warm-up RAMP (load type 'sets') counts as warm-up even when a program lists it under 'main'
+const roleOf = (ex) => (ex?.section === 'warmup' || ex?.load?.type === 'sets' ? 'warmup' : 'main');
 const keyOf = (ex) => `${ex?.exerciseId ?? ''}|${roleOf(ex)}`;
 const setKind = (s) => (s?.kind === 'warmup' ? 'warmup' : 'working');
 

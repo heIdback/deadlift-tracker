@@ -19,6 +19,7 @@ import { trackWrite } from '../core/sync-status.js';
 import { listProgramRuns, getProgramDays } from './programService.js';
 import { getInProgressWorkout } from './workoutService.js';
 import { planSetActiveProgram } from '../utils/programSwitch.js';
+import { planNewCycle } from '../utils/programCycle.js';
 import { pickStarterPosition } from '../utils/starterProgram.js';
 import { commitTrainingBatch } from './trainingGenerationService.js';
 
@@ -89,5 +90,41 @@ export async function setActiveProgram(uid, programId) {
 
     await commitTrainingBatch(uid, batch); // v22: admin-reset generation guard
     return { ok: true, alreadyActive: false, runId };
+  });
+}
+
+/**
+ * v33 — "Start a new cycle" after a program is completed: closes the finished
+ * run (status 'completed') and starts a NEW run of the same program at Week 1 /
+ * first day, recording the 1RMs that changed (history entry + current value,
+ * exactly like userService.recordOneRepMax) — all in ONE batch through the
+ * admin-reset generation guard. Like Start/Finish, the commit is handed to
+ * Firestore and NOT awaited: the local cache has it at once, so the card never
+ * hangs offline; it syncs when back online (a server rejection is logged).
+ * Resolves {ok: true, runId} | {ok: false, reason, message}.
+ */
+export async function startNewCycle(uid, { run, program, newMaxes, currentMaxes }) {
+  if (!run || !program) return { ok: false, reason: 'no_run', message: 'No finished program run to restart.' };
+  const inProgress = await getInProgressWorkout(uid);
+  if (inProgress) return { ok: false, reason: 'in_progress_workout', message: 'Finish or skip the workout in progress first.' };
+  const days = await getProgramDays(uid, program.id);
+  const plan = planNewCycle({ days, newMaxes, currentMaxes });
+  if (!plan.ok) return { ok: false, reason: 'invalid', message: plan.message };
+
+  return trackWrite(async () => {
+    const batch = writeBatch(db);
+    batch.update(doc(runsCol(uid), run.id), { status: 'completed', activeWorkoutId: null });
+    const newRef = doc(runsCol(uid));
+    batch.set(newRef, {
+      programId: program.id, startDate: serverTimestamp(), current: plan.position, status: 'active', overrides: {},
+    });
+    for (const { exerciseId, kg } of plan.maxesToRecord) {
+      batch.set(doc(collection(db, 'users', uid, 'maxes')), {
+        exerciseId, kg, kind: 'training', effectiveDate: serverTimestamp(), source: 'new-cycle',
+      });
+      batch.update(doc(db, 'users', uid), { [`currentMaxes.${exerciseId}`]: { kg, kind: 'training', updatedAt: serverTimestamp() } });
+    }
+    commitTrainingBatch(uid, batch).catch((err) => console.error('startNewCycle: commit failed', err));
+    return { ok: true, runId: newRef.id, recorded: plan.maxesToRecord.length };
   });
 }

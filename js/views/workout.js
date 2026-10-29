@@ -9,7 +9,7 @@ import { getPrimaryProgramContext, getProgramDays, startProgramRun } from '../se
 import {
   resolveActiveWorkout, startOrResumeWorkoutForCurrentPosition,
   updateWorkoutExercises, subscribeToWorkoutLocalStatus, finishWorkout, skipWorkout, reconcileLegacyProgramPosition,
-  skipAheadToPosition, updateWorkoutNote, MAX_WORKOUT_NOTE_LENGTH, getPreviousPerformance,
+  skipAheadToPosition, updateWorkoutNote, MAX_WORKOUT_NOTE_LENGTH, getPreviousPerformance, listCompletedWorkouts,
 } from '../services/workoutService.js';
 import { listSkipTargets, MAX_SKIP_REASON_LENGTH } from '../utils/skipAhead.js';
 import { buildResolvedExerciseList, generateSetsForExercise } from '../utils/workoutSnapshot.js';
@@ -22,7 +22,11 @@ import { readableBasisName } from '../utils/programDisplay.js';
 // v32: progress counts, finished-exercise collapse, ±2.5 kg, screen kept on.
 import { exerciseProgress, workoutProgress, isExerciseFinished, awaitsReps, stepKg, KG_STEP } from '../utils/workoutProgress.js';
 import { keepScreenOn } from '../core/wakeLock.js';
-import { formatDate } from '../utils/dates.js';
+import { formatDate, formatHumanDuration } from '../utils/dates.js';
+// v33: summary after FINISH WORKOUT.
+import { summarizeWorkout } from '../utils/workoutSummary.js';
+import { isRunCompleted } from '../utils/programCycle.js';
+import { mountProgramCompleteCard } from './programCompleteCard.js';
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
 
@@ -157,6 +161,16 @@ export async function mount(root) {
   // Self-heals a run stuck at an already-completed position from before
   // automatic advancement existed (Phase 3C). No-op once caught up.
   run = await reconcileLegacyProgramPosition(uid, run);
+
+  // v33: a finished program offers no workout in a week that doesn't exist —
+  // the "Program completed" card instead (new cycle / another program).
+  if (isRunCompleted(run, program)) {
+    root.innerHTML = '<section class="workout-view"><div id="program-complete-slot"></div></section>';
+    await mountProgramCompleteCard(root.querySelector('#program-complete-slot'), {
+      uid, program, run, profile: await getUserProfile(uid), onRestarted: () => mount(root),
+    });
+    return unmount;
+  }
 
   // No active workout: show a live, NOT-yet-saved preview of the current
   // (or would-be Week 1 Day 1) position, computed straight from the
@@ -455,6 +469,46 @@ function showPreviousPerformance(root, prev) {
   });
 }
 
+// same depth as History, so the summary and History agree on what is a PR
+const SUMMARY_LOOKBACK = 200;
+const fmtKg = (v) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })} kg`;
+const signed = (v, unit = ' kg') => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}${unit}`;
+const setText = (t) => (t ? `${t.kg} kg × ${t.reps}` : '—');
+
+/** v33 — the screen shown after FINISH WORKOUT (read-only; Done → Home). */
+function showFinishSummary(root, sum, workout, { offline }) {
+  const c = sum.comparison;
+  root.innerHTML = `
+    <section class="workout-view workout-summary" id="workout-summary">
+      <div class="card card-primary">
+        <div class="card-label">Workout complete${offline ? ' — will sync when back online' : ''}</div>
+        <h2 class="card-title">${escapeHtml(workout.dayName)} · Week ${escapeHtml(workout.week)}</h2>
+        <div class="summary-stats">
+          <div class="stat-card"><div class="stat-label">Sets</div><div class="stat-value">${sum.sets.done}/${sum.sets.total}</div></div>
+          <div class="stat-card"><div class="stat-label">Time</div><div class="stat-value">${sum.durationSec != null ? escapeHtml(formatHumanDuration(sum.durationSec)) : '—'}</div></div>
+          <div class="stat-card"><div class="stat-label">Volume</div><div class="stat-value">${escapeHtml(fmtKg(sum.volumeKg))}</div></div>
+        </div>
+        ${sum.sets.failed || sum.sets.skipped ? `<p class="text-muted">${[sum.sets.failed ? `${sum.sets.failed} failed` : '', sum.sets.skipped ? `${sum.sets.skipped} skipped` : ''].filter(Boolean).join(' · ')}</p>` : ''}
+      </div>
+      <div class="card" id="summary-prs">
+        <h3>PRs</h3>
+        ${sum.prs.length ? `<ul class="notice-list">${sum.prs.map((p) => `<li><span class="badge-pr">${escapeHtml(p.label)}</span> ${escapeHtml(p.exercise)} — <strong>${escapeHtml(p.text)}</strong></li>`).join('')}</ul>`
+    : '<p class="text-muted">No new PRs this time.</p>'}
+      </div>
+      <div class="card" id="summary-compare">
+        <h3>Compared with last time</h3>
+        ${c ? `
+          <p class="text-muted">Same day, ${c.previous.week != null ? `Week ${escapeHtml(c.previous.week)}, ` : ''}${escapeHtml(formatDate(c.previous.finishedAt))}</p>
+          <ul class="notice-list">
+            ${c.mainSet ? `<li>${escapeHtml(c.mainSet.name)} top set: ${escapeHtml(setText(c.mainSet.before))} → <strong>${escapeHtml(setText(c.mainSet.after))}</strong>${c.mainSet.deltaKg != null && c.mainSet.deltaKg !== 0 ? ` (${escapeHtml(signed(c.mainSet.deltaKg))})` : ''}</li>` : ''}
+            <li>Volume: ${escapeHtml(fmtKg(c.volume.before))} → <strong>${escapeHtml(fmtKg(c.volume.after))}</strong> (${escapeHtml(signed(c.volume.delta))})</li>
+          </ul>` : '<p class="text-muted">First time on this program day — nothing to compare yet.</p>'}
+      </div>
+      <a class="btn btn-primary btn-large" href="#/home" id="summary-done">Done</a>
+    </section>`;
+  window.scrollTo?.(0, 0);
+}
+
 function renderWorkoutHtml(workout) {
   return `
     <section class="workout-view">
@@ -500,6 +554,7 @@ function mountActiveWorkout(root, uid, workoutInput) {
     previous();
   }
   let progressEl = null;
+  const sessionStartedAt = Date.now(); // v33: duration fallback while startedAt is still a pending server time
   const { exercises: backfilled, changed } = backfillSets(workoutInput.exercises);
   // FINAL POLISH PASS: `workout.exercises` here is both the render source
   // AND the exact array autosaved back via updateWorkoutExercises below —
@@ -887,8 +942,21 @@ function mountActiveWorkout(root, uid, workoutInput) {
       status.textContent = navigator.onLine
         ? 'Workout completed.'
         : 'Workout completed — will sync when back online.';
-      console.debug('[FINISH] workout.js doFinish: navigating to Home', { workoutId: workout.id });
-      setTimeout(() => { location.hash = '#/home'; }, 600);
+      // v33: a short summary instead of jumping straight to Home.
+      stopKeepingScreenOn();
+      const finishedAt = new Date();
+      let previous = [];
+      try { previous = await listCompletedWorkouts(uid, SUMMARY_LOOKBACK); } catch { /* offline/cache miss: summary without PRs/comparison */ }
+      // The lifter may have left this screen while history was loading: never
+      // draw the summary over another screen.
+      if (!progressEl?.isConnected) return;
+      try {
+        showFinishSummary(root, summarizeWorkout({ workout, previousWorkouts: previous, now: finishedAt, startedAtMs: sessionStartedAt }), workout, { offline: navigator.onLine === false });
+      } catch (summaryErr) {
+        // the workout IS finished — never leave it on a live logger
+        console.error('[FINISH] summary failed, going Home', summaryErr);
+        location.hash = '#/home';
+      }
     } catch (err) {
       console.error('[FINISH] workout.js doFinish: caught error', err);
       status.textContent = `Error: ${err.message}`;

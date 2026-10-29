@@ -14,6 +14,9 @@ import { totalWeeksOf } from '../utils/programEditModel.js';
 // v32: the next workout's main set on the "Next Workout" card.
 import { buildResolvedExerciseList } from '../utils/workoutSnapshot.js';
 import { mainSetSummary } from '../utils/programDisplay.js';
+// v33: "Program completed" card instead of a workout in a week that doesn't exist.
+import { isRunCompleted } from '../utils/programCycle.js';
+import { mountProgramCompleteCard } from './programCompleteCard.js';
 import {
   loadHomeInsights, suggestionsHtml, goalCardHtml, wireInsights,
 } from './homeInsights.js';
@@ -106,14 +109,16 @@ export async function mount(root) {
     console.warn('[HOME] insights unavailable', err);
   }
 
+  const completed = !inProgress && isRunCompleted(run, program);
   root.innerHTML = `
     <section class="dashboard">
       <div class="card card-primary">
         <div class="card-label">Current Program</div>
         <h2 class="card-title">${escapeHtml(program.name)}</h2>
-        <div class="card-sub">Week ${weekOfEight} / ${totalWeeksOf(program) || '—'}${weekMeta?.isDeload ? ' · Deload' : ''}${weekMeta?.isPrAttempt ? ' · PR attempt' : ''}</div>
+        <div class="card-sub">${completed ? `Completed · ${totalWeeksOf(program) || '—'} weeks` : `Week ${weekOfEight} / ${totalWeeksOf(program) || '—'}${weekMeta?.isDeload ? ' · Deload' : ''}${weekMeta?.isPrAttempt ? ' · PR attempt' : ''}`}</div>
       </div>
 
+      ${completed ? '<div id="program-complete-slot"></div>' : `
       <div class="card card-action">
         <div class="card-label">${inProgress ? 'Workout In Progress' : 'Next Workout'}</div>
         <h2 class="card-title">${inProgress ? escapeHtml(inProgress.dayName) || 'Resume session' : escapeHtml(nextDay?.name) || '—'}</h2>
@@ -122,7 +127,7 @@ export async function mount(root) {
           ${inProgress ? 'RESUME WORKOUT' : 'START WORKOUT'}
         </button>
         <p class="form-status" id="start-status" role="status"></p>
-      </div>
+      </div>`}
 
       ${insights ? suggestionsHtml(insights.suggestions) : ''}
 
@@ -167,7 +172,13 @@ export async function mount(root) {
     }
   }
 
-  root.querySelector('#start-workout-btn').addEventListener('click', async (e) => {
+  if (completed) {
+    await mountProgramCompleteCard(root.querySelector('#program-complete-slot'), {
+      uid, program, run, profile, onRestarted: () => mount(root),
+    });
+  }
+
+  root.querySelector('#start-workout-btn')?.addEventListener('click', async (e) => {
     const btn = e.target;
     // Correction pass 8: see js/views/workout.js's matching comment — a
     // disabled <button> still runs this handler for a raw/programmatic

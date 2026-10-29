@@ -6,13 +6,15 @@ free **Spark plan** (no Cloud Functions, no paid services). It replaced a
 Google Sheets–based deadlift program and is built for multiple users,
 multiple programs and future features without a rewrite.
 
-**Status (app 1.1.0, cache v32):** Google sign-in with admin approval
+**Status (app 1.1.0, cache v33):** Google sign-in with admin approval
 (§7a), automatic onboarding (a starter program installs itself and the user
 enters their starting 1RMs — §15a), the three-layer workout model (template →
 programRun → immutable snapshot) with a mobile-first per-set logger
 (actual kg/reps, failed/skipped sets, RPE, notes, "Last time" values, progress
-counts, screen kept on), History with limited post-workout corrections,
-Progress with PR detection, Current/Tested/Estimated 1RM, charts and 1RM
+counts, screen kept on, a summary after Finish), History with a month calendar
+and limited post-workout corrections, a "Program completed" screen with a new
+cycle,
+Progress with PR detection, relative strength (× bodyweight), Current/Tested/Estimated 1RM, charts and 1RM
 history, Program management (browse, edit days, rename, duplicate, Set Active,
 hide/delete inactive programs), Program Import from JSON/CSV (as a new program
 or as an update of an existing one), skip ahead, backup/restore, analysis
@@ -1441,6 +1443,31 @@ it exactly as stored.
 - Home shows "Week N / <the program's own number of weeks>" (was a
   hard-coded "/ 8").
 
+### v33 — Finish summary, end of program, History calendar, relative strength
+- **After FINISH WORKOUT** a summary replaces the jump to Home: sets done/total,
+  time, volume (Σ kg × reps of the sets that count for analytics), PRs set in
+  this workout (same engine as History), and a comparison with the previous
+  time this program day was done (main lift's top set, volume). Done → Home.
+  (`js/utils/workoutSummary.js`)
+- **End of a program** (run `programCompleted`, or a position past the last
+  week): Home and Workout show **Program completed** with each main lift's 1RM
+  at the start of the run and now, instead of a workout in a week that doesn't
+  exist. **Start a new cycle** asks to confirm/update the four 1RMs, closes the
+  run (`status: 'completed'`) and starts a new run of the same program at Week
+  1 — one batch, changed 1RMs recorded like any 1RM update (`source:
+  'new-cycle'`). **Choose another program** → Program tab.
+  (`js/utils/programCycle.js`, `js/views/programCompleteCard.js`,
+  `programSwitchService.startNewCycle`)
+- **History calendar**: a month grid above the list (Monday first), a dot per
+  finished workout — green done, gold partial / not logged, grey skipped. One
+  workout on a day → opens it; several → listed under the grid. Older months
+  are read on demand with the existing `status + finishedAt` index.
+  (`js/utils/historyCalendar.js`)
+- **Progress → Relative strength**: current 1RM ÷ latest logged bodyweight
+  (Deadlift headline, e.g. "2.20× BW", plus the other three lifts).
+- "Last:" values: a warm-up ramp listed under *main* is now always treated as a
+  warm-up when pairing with last time.
+
 ### Program → Hide / Delete inactive programs
 Open an inactive program (Program → its name): **Hide** takes it off "Your
 Programs" (and off the import's "Update a program" list) — it waits under
@@ -1582,6 +1609,7 @@ One-time setup: Git signed in to GitHub, `npm install -g firebase-tools`,
 (`firebase.json` → `hosting.ignore`).
 
 ### Tests
-See `tests/README.md`. `tests/rules/` needs the Firebase emulator (Java +
-firebase-tools); it skips itself otherwise and has **not** been run in the
-sandbox this was built in.
+`tests/` is in the repository (not deployed — `hosting.ignore`). See
+`tests/README.md`: `sh tests/run-all.sh` runs unit, service, precache and
+browser tests. They use an in-memory stand-in for Firebase, so they do not check
+`firestore.rules` or the real SDK.

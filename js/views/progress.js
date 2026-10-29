@@ -40,7 +40,9 @@ import { epleyEstimate1RM } from '../utils/calculations.js';
 // rules fully unit-tested independent of this file. See that module's own
 // comment for why it structurally cannot leak Tested PR/Estimated data
 // into this list.
-import { buildCurrentMaxHistoryRows } from '../utils/maxHistoryAnalytics.js';
+import { buildCurrentMaxHistoryRows, relativeStrength } from '../utils/maxHistoryAnalytics.js';
+// v33: "Relative strength" (current 1RM ÷ latest bodyweight).
+import { REQUIRED_STARTER_LIFTS } from '../utils/requiredLifts.js';
 // Phase 5B, Package 1 — Current 1RM is read here for side-by-side DISPLAY
 // (spec section 8: "Current 1RM, if that exercise has a user-controlled
 // Current 1RM") and for the passive suggestion comparison in section 9.
@@ -718,6 +720,22 @@ function aboutEstimated1RMHtml() {
     </details>`;
 }
 
+/** v33 — Deadlift (headline) and the other main lifts relative to bodyweight. */
+function relativeStrengthHtml(rs) {
+  const dl = rs.rows.find((r) => r.id === 'deadlift');
+  const others = rs.rows.filter((r) => r.id !== 'deadlift');
+  const ratio = (r) => (r?.ratio != null ? `${r.ratio.toFixed(2)}× BW` : '—');
+  return `
+    <div class="card relative-strength" id="relative-strength">
+      <div class="card-label">Relative strength</div>
+      ${rs.bodyweight ? `
+        <div class="rs-headline"><span class="rs-lift">Deadlift</span> <strong class="rs-ratio" id="rs-deadlift">${escapeHtml(ratio(dl))}</strong></div>
+        <p class="text-muted">${dl?.kg != null ? `${escapeHtml(dl.kg)} kg` : 'No deadlift 1RM'} ÷ ${escapeHtml(rs.bodyweight.kg)} kg bodyweight${rs.bodyweight.date ? ` (${escapeHtml(formatDate(rs.bodyweight.date))})` : ''} — current 1RM ÷ latest bodyweight.</p>
+        <div class="rs-others">${others.map((r) => `<span>${escapeHtml(r.label)} <strong>${escapeHtml(ratio(r))}</strong></span>`).join('')}</div>`
+    : '<p class="text-muted">Log your bodyweight on Profile to see your lifts relative to it (e.g. Deadlift 2.1× BW).</p>'}
+    </div>`;
+}
+
 export async function mount(root) {
   const uid = getCurrentUser().uid;
   root.innerHTML = `<div class="loading-state" role="status">Loading progress…</div>`;
@@ -768,6 +786,8 @@ export async function mount(root) {
             </select>
           </label>
         </div>` : ''}
+
+      ${relativeStrengthHtml(relativeStrength({ currentMaxes, bodyweightRecords, lifts: REQUIRED_STARTER_LIFTS }))}
 
       <h3>Strength</h3>
       <div id="exercise-metrics"></div>

@@ -54,7 +54,10 @@
 // formatHumanDuration — a display-only concern, no timestamp storage
 // changed); (3) scroll-to-top after a successful Edit-mode Save or Cancel.
 import { getCurrentUser } from '../core/auth.js';
-import { listCompletedWorkouts, getCurrentPeriodWorkout, updateCompletedWorkoutLog } from '../services/workoutService.js';
+import { listCompletedWorkouts, getCurrentPeriodWorkout, updateCompletedWorkoutLog, listCompletedWorkoutsBetween } from '../services/workoutService.js';
+// v33: month calendar above the list.
+import { monthGrid, workoutsByDay, monthRange, shiftMonth } from '../utils/historyCalendar.js';
+import { toMillis as millisOf } from '../utils/progressAnalytics.js';
 import { getProgram } from '../services/programService.js';
 import {
   resolveCompletionState, isEditableCompletedWorkout, classifyCompletionState, EXPLICIT_SKIP_STATE,
@@ -558,6 +561,7 @@ async function renderList(root, uid) {
   root.innerHTML = `
     <section class="history-view">
       <h2>History</h2>
+      <div class="card history-calendar" id="history-calendar"></div>
       <div class="history-list">
         ${completed.map((w) => {
           const programName = programNameById.get(w.programId);
@@ -575,6 +579,80 @@ async function renderList(root, uid) {
         }).join('')}
       </div>
     </section>`;
+
+  mountCalendar(root.querySelector('#history-calendar'), uid, completed);
+}
+
+const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+/**
+ * v33 — month calendar: a dot per finished workout on its day (green complete,
+ * yellow partial / not logged, grey skipped). Tapping a day with one workout
+ * opens it; with several, lists them under the grid. Months older than the
+ * list already loaded are read on demand (one query per month).
+ */
+function mountCalendar(el, uid, loaded) {
+  if (!el) return;
+  const now = new Date();
+  const current = { year: now.getFullYear(), month: now.getMonth() };
+  let shown = { ...current };
+  const oldestLoaded = loaded.length ? Math.min(...loaded.map((w) => millisOf(w.finishedAt) || Infinity)) : Infinity;
+  const listIsComplete = loaded.length < HISTORY_LIST_LIMIT;
+  const cache = new Map(); // 'YYYY-M' → workouts
+
+  async function workoutsFor({ year, month }) {
+    const [from, to] = monthRange(year, month);
+    if (listIsComplete || from.getTime() >= oldestLoaded) {
+      return loaded.filter((w) => { const t = millisOf(w.finishedAt); return t >= from.getTime() && t < to.getTime(); });
+    }
+    const key = `${year}-${month}`;
+    if (!cache.has(key)) {
+      try { cache.set(key, await listCompletedWorkoutsBetween(uid, from, to)); } catch { return []; } // failure not cached: next visit retries
+    }
+    return cache.get(key);
+  }
+
+  let renderSeq = 0;
+  async function render() {
+    const seq = ++renderSeq;
+    const month = { ...shown };
+    el.querySelectorAll('.cal-nav').forEach((b) => { b.disabled = true; });
+    const data = await workoutsFor(month);
+    if (seq !== renderSeq) return; // a newer month was asked for meanwhile
+    const byDay = workoutsByDay(data);
+    const title = new Date(month.year, month.month, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const isCurrent = month.year === current.year && month.month === current.month;
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    el.innerHTML = `
+      <div class="cal-head">
+        <button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button>
+        <span class="cal-title" id="cal-title">${escapeHtml(title)}</span>
+        <button type="button" class="cal-nav" id="cal-next" aria-label="Next month" ${isCurrent ? 'disabled' : ''}>›</button>
+      </div>
+      <div class="cal-grid" role="grid">
+        ${WEEKDAYS.map((d) => `<span class="cal-weekday">${d}</span>`).join('')}
+        ${monthGrid(month.year, month.month).flat().map((c) => {
+          if (!c) return '<span class="cal-cell is-empty"></span>';
+          const items = byDay.get(c.key) ?? [];
+          return `<button type="button" class="cal-cell${items.length ? ' has-workout' : ''}${c.key === todayKey ? ' is-today' : ''}" data-key="${c.key}" ${items.length ? '' : 'disabled'}
+            aria-label="${escapeHtml(`${c.day}: ${items.length} workout${items.length === 1 ? '' : 's'}`)}">
+            <span class="cal-day">${c.day}</span>
+            <span class="cal-dots">${items.slice(0, 3).map((i) => `<span class="cal-dot ${i.dot}"></span>`).join('')}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="cal-legend text-muted"><span class="cal-dot is-complete"></span> done <span class="cal-dot is-partial"></span> partial <span class="cal-dot is-skipped"></span> skipped</div>
+      <div id="cal-day-list"></div>`;
+    el.querySelector('#cal-prev').addEventListener('click', () => { shown = shiftMonth(shown, -1); render(); });
+    el.querySelector('#cal-next').addEventListener('click', () => { if (!isCurrent) { shown = shiftMonth(shown, 1); render(); } });
+    el.querySelectorAll('.cal-cell.has-workout').forEach((b) => b.addEventListener('click', () => {
+      const items = byDay.get(b.dataset.key) ?? [];
+      if (items.length === 1) { location.hash = `#/history?workoutId=${encodeURIComponent(items[0].id)}`; return; }
+      el.querySelector('#cal-day-list').innerHTML = `<ul class="notice-list">${items.map((i) => `
+        <li><a href="#/history?workoutId=${encodeURIComponent(i.id)}">${escapeHtml(i.dayName)}${i.week != null ? ` · Week ${escapeHtml(i.week)}` : ''}</a></li>`).join('')}</ul>`;
+    }));
+  }
+  render();
 }
 
 export async function mount(root) {

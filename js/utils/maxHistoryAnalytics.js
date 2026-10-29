@@ -95,3 +95,24 @@ export function buildCurrentMaxHistoryRows(maxHistoryEntries, bodyweightRecords)
     })
     .sort((a, b) => toMillis(b.date) - toMillis(a.date)); // newest first — spec section 10
 }
+
+/**
+ * v33 — "Relative strength" on Progress: each main lift's CURRENT 1RM ÷ the
+ * latest logged bodyweight, e.g. Deadlift 2.25× BW. Descriptive only.
+ * → { bodyweight: {kg, date} | null, rows: [{id, label, kg, ratio}] } — ratio
+ * is null when either number is missing; rounded to 2 decimals.
+ */
+export function relativeStrength({ currentMaxes, bodyweightRecords, lifts }) {
+  const latest = [...(bodyweightRecords ?? [])]
+    .filter((r) => typeof r?.value === 'number' && r.value > 0)
+    .sort((a, b) => toMillis(b.date) - toMillis(a.date))[0] ?? null;
+  const bw = latest ? latest.value : null;
+  return {
+    bodyweight: latest ? { kg: latest.value, date: latest.date ?? null } : null,
+    rows: (lifts ?? []).map(({ id, label }) => {
+      const kg = currentMaxes?.[id]?.kg ?? null;
+      const r = strengthToBodyweightRatio(kg, bw);
+      return { id, label, kg, ratio: r == null ? null : Math.round(r * 100) / 100 };
+    }),
+  };
+}
